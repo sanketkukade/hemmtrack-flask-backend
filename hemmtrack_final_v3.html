@@ -459,6 +459,39 @@ body.light-mode .rec-table tr:hover td { background:#ebf8ff !important; }
     </div>
   </div>
 
+  <!-- PPT ONE PAGER ALERT BOX — Independent counter (resets at 5) -->
+  <div id="ppt-alert-box" style="
+    font-family:Consolas,monospace;
+    text-align:center;
+    background:linear-gradient(135deg,rgba(62,134,246,0.08),rgba(0,102,255,0.05));
+    border:1px solid rgba(62,134,246,0.3);
+    border-radius:14px;
+    padding:10px 16px;
+    min-width:170px;
+    position:relative;
+    overflow:hidden;
+  ">
+    <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#3e86f6,transparent);"></div>
+    
+    <!-- Normal state -->
+    <div id="ppt-normal-state">
+      <div style="font-size:11px;color:#3e86f6;font-weight:700;letter-spacing:1px;">📊 ONE PAGER</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:4px;">
+        <div id="ppt-countdown" style="font-size:30px;font-weight:900;color:#ffffff;">0</div>
+        <div style="font-size:11px;color:#4a6fa5;line-height:1.4;">HIGH<br>logged</div>
+      </div>
+      <div style="font-size:9px;color:#4a6fa5;margin-top:2px;">PPT Alert After 5</div>
+    </div>
+
+    <!-- PPT sent state -->
+    <div id="ppt-sent-state" style="display:none;">
+      <div style="font-size:20px;">📊</div>
+      <div style="font-size:11px;font-weight:900;color:#3e86f6;letter-spacing:1px;margin-top:2px;">PPT SENT</div>
+      <div style="font-size:9px;color:#3e86f6;margin-top:3px;">One Pager</div>
+      <div style="font-size:9px;color:#4a6fa5;">Email + Telegram</div>
+    </div>
+  </div>
+
   <!-- Old blink dot (hidden - kept for JS compatibility) -->
   <div id="blink-indicator" style="display:none;">
     <div id="blink-dot"></div>
@@ -1356,16 +1389,16 @@ body.light-mode .rec-table tr:hover td { background:#ebf8ff !important; }
   </div>
 </div>
 
-<!-- PPT ALERT POPUP — SEPARATE from existing alert-popup -->
+<!-- PPT ONE PAGER POPUP — SEPARATE from alert-popup -->
 <div id="ppt-alert-popup" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.82);z-index:10000;align-items:center;justify-content:center;">
   <div style="background:linear-gradient(135deg,#0a1628,#0f1928);border:2px solid rgba(62,134,246,0.6);border-radius:20px;padding:28px;max-width:420px;width:92%;text-align:center;box-shadow:0 0 60px rgba(62,134,246,0.25);position:relative;">
     <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,#3e86f6,transparent);border-radius:20px 20px 0 0;"></div>
     <div style="font-size:44px;margin-bottom:6px;">📊</div>
     <div style="font-size:18px;font-weight:900;color:#3e86f6;letter-spacing:2px;margin-bottom:2px;">ONE PAGER GENERATED</div>
-    <div style="font-size:11px;color:#4a6fa5;margin-bottom:16px;letter-spacing:1px;">AUTO-ESCALATION — OCC THRESHOLD</div>
-    <div id="ppt-alert-details" style="background:rgba(62,134,246,0.06);border:1px solid rgba(62,134,246,0.2);border-radius:10px;padding:14px;margin-bottom:14px;text-align:left;font-size:12px;color:#d4e8ff;line-height:1.9;"></div>
-    <div id="ppt-alert-status" style="background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.15);border-radius:10px;padding:12px;margin-bottom:16px;text-align:left;font-size:11px;line-height:2.1;color:#00ff88;font-weight:700;"></div>
-    <button onclick="closePptAlertPopup()" style="background:linear-gradient(135deg,rgba(62,134,246,0.15),rgba(62,134,246,0.05));border:1px solid rgba(62,134,246,0.3);color:#3e86f6;padding:11px 24px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;width:100%;">✕ CLOSE</button>
+    <div style="font-size:11px;color:#4a6fa5;margin-bottom:16px;letter-spacing:1px;">AUTO-ESCALATION — OCC = 5</div>
+    <div id="ppt-popup-details" style="background:rgba(62,134,246,0.06);border:1px solid rgba(62,134,246,0.2);border-radius:10px;padding:14px;margin-bottom:14px;text-align:left;font-size:12px;color:#d4e8ff;line-height:1.9;"></div>
+    <div id="ppt-popup-status" style="background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.15);border-radius:10px;padding:12px;margin-bottom:16px;text-align:left;font-size:11px;line-height:2.1;color:#00ff88;font-weight:700;"></div>
+    <button onclick="closePptPopup()" style="background:linear-gradient(135deg,rgba(62,134,246,0.15),rgba(62,134,246,0.05));border:1px solid rgba(62,134,246,0.3);color:#3e86f6;padding:11px 24px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;width:100%;">✕ CLOSE</button>
   </div>
 </div>
 
@@ -1558,29 +1591,37 @@ function addDefect(){
   renderPreviews();
   
   // Alert — HIGH defects count based alerts
-  // OCC=3 → EmailJS (existing frontend) + Backend API (email + telegram)
-  // OCC=5 → Backend API only (email with PPT + telegram)
+  // TWO INDEPENDENT COUNTERS:
+  // occCount: 1→2→3→ALERT→RESET (EmailJS + Telegram)
+  // pptCount: 1→2→3→4→5→ALERT→RESET (Backend PPT + Email)
   if (d.sev === 'HIGH') {
     sessionHighCount++;
-    console.log('Session HIGH count:', sessionHighCount);
+    sessionPptCount++;
+    console.log('OCC count:', sessionHighCount, '| PPT count:', sessionPptCount);
     updateOCCCountdown(sessionHighCount);
+    updatePPTCountdown(sessionPptCount);
 
-    // OCC = 3 → Existing frontend alert (DO NOT MODIFY)
+    // ═══ OCC = 3 → Existing frontend alert (DO NOT MODIFY) ═══
     if (sessionHighCount % 3 === 0) {
-      console.log('Triggering alert at count:', sessionHighCount);
+      console.log('Triggering OCC alert at count:', sessionHighCount);
       showAlertPopup(d, sessionHighCount);
     }
 
-    // OCC = 3 → ALSO call Flask backend for email + telegram
+    // ═══ OCC = 3 → ALSO call Flask backend for email + telegram ═══
     if (sessionHighCount === 3) {
       console.log('🔔 OCC=3 — calling Flask backend...');
       callFlaskBackend(d, sessionHighCount);
+      // Reset OCC counter
+      sessionHighCount = 0;
     }
 
-    // OCC = 5 → Flask backend only (email with PPT + telegram)
-    if (sessionHighCount === 5) {
-      console.log('🚨 OCC=5 — calling Flask backend for escalation...');
-      callFlaskBackend(d, sessionHighCount);
+    // ═══ PPT = 5 → Flask backend for One Pager PPT (SEPARATE counter) ═══
+    if (sessionPptCount === 5) {
+      console.log('🚨 PPT=5 — calling Flask backend for One Pager...');
+      callFlaskBackendPPT(d, sessionPptCount);
+      // Reset PPT counter
+      sessionPptCount = 0;
+      updatePPTCountdown(0);
     }
   }
   document.getElementById('f-rem').value='';
@@ -2562,20 +2603,84 @@ function closeAlertPopup() {
 
 
 // ============================================================
-// FLASK BACKEND API CALL — /check_occ
+// FLASK BACKEND API CALLS — TWO INDEPENDENT FUNCTIONS
 // ============================================================
-// OCC=3 → Backend sends email + Telegram (no PPT)
-// OCC=5 → Backend generates One Pager PPT, sends email + Telegram
-// SEPARATE from existing EmailJS/alert logic
+// callFlaskBackend()    → OCC=3 → Email + Telegram (no PPT)
+// callFlaskBackendPPT() → PPT=5 → One Pager PPT + Email + Telegram
 // ============================================================
 
 const FLASK_BACKEND_URL = 'https://hemmtrack-flask-backend-production.up.railway.app/check_occ';
 
-// ═══ PPT ALERT POPUP — Independent from existing alert-popup ═══
-function showPptAlertPopup(d, highCount, result) {
+// ═══ PPT COUNTDOWN UI — updates the blue PPT box in header ═══
+function updatePPTCountdown(count) {
+  const normalState = document.getElementById('ppt-normal-state');
+  const sentState = document.getElementById('ppt-sent-state');
+  const countdown = document.getElementById('ppt-countdown');
+  const box = document.getElementById('ppt-alert-box');
+  if (!countdown) return;
+
+  if (count === 0) {
+    // After reset
+    countdown.textContent = '0';
+    countdown.style.color = '#ffffff';
+    countdown.style.textShadow = 'none';
+    if (box) box.style.borderColor = 'rgba(62,134,246,0.3)';
+    if (normalState) normalState.style.display = 'block';
+    if (sentState) sentState.style.display = 'none';
+    return;
+  }
+
+  if (count >= 5) {
+    // PPT triggered!
+    countdown.textContent = '5';
+    countdown.style.color = '#3e86f6';
+    countdown.style.textShadow = '0 0 20px rgba(62,134,246,0.8)';
+    if (box) box.style.borderColor = 'rgba(62,134,246,0.7)';
+    setTimeout(() => {
+      if (normalState) normalState.style.display = 'none';
+      if (sentState) sentState.style.display = 'block';
+      if (box) {
+        box.style.borderColor = 'rgba(0,255,136,0.5)';
+        box.style.background = 'linear-gradient(135deg,rgba(0,255,136,0.08),rgba(0,200,100,0.05))';
+      }
+    }, 600);
+    setTimeout(() => {
+      if (normalState) normalState.style.display = 'block';
+      if (sentState) sentState.style.display = 'none';
+      if (box) {
+        box.style.borderColor = 'rgba(62,134,246,0.3)';
+        box.style.background = 'linear-gradient(135deg,rgba(62,134,246,0.08),rgba(0,102,255,0.05))';
+      }
+      countdown.textContent = '0';
+      countdown.style.color = '#ffffff';
+      countdown.style.textShadow = 'none';
+    }, 8000);
+  } else {
+    // Counting up: 1, 2, 3, 4
+    if (normalState) normalState.style.display = 'block';
+    if (sentState) sentState.style.display = 'none';
+    countdown.textContent = count;
+    if (count <= 2) {
+      countdown.style.color = '#ffffff';
+      countdown.style.textShadow = '0 0 10px rgba(255,255,255,0.3)';
+      if (box) box.style.borderColor = 'rgba(62,134,246,0.3)';
+    } else if (count === 3) {
+      countdown.style.color = '#ffaa00';
+      countdown.style.textShadow = '0 0 15px rgba(255,170,0,0.5)';
+      if (box) box.style.borderColor = 'rgba(255,170,0,0.4)';
+    } else {
+      countdown.style.color = '#ff3d5a';
+      countdown.style.textShadow = '0 0 20px rgba(255,61,90,0.7)';
+      if (box) box.style.borderColor = 'rgba(255,61,90,0.5)';
+    }
+  }
+}
+
+// ═══ PPT POPUP — shows when One Pager is generated ═══
+function showPptPopup(d, result) {
   const popup = document.getElementById('ppt-alert-popup');
-  const details = document.getElementById('ppt-alert-details');
-  const statusEl = document.getElementById('ppt-alert-status');
+  const details = document.getElementById('ppt-popup-details');
+  const statusEl = document.getElementById('ppt-popup-status');
   if (!popup || !details || !statusEl) return;
   const now = new Date();
   const pad = n => String(n).padStart(2, '0');
@@ -2587,8 +2692,8 @@ function showPptAlertPopup(d, highCount, result) {
   const fname = result.ppt?.filename || 'OnePager.pptx';
   details.innerHTML = `
     <div style="text-align:center;margin-bottom:10px;">
-      <div style="font-size:28px;font-weight:900;color:#ff3d5a;">OCC = ${String(highCount).padStart(2,'0')}</div>
-      <div style="font-size:10px;color:#ff3d5a;font-weight:700;letter-spacing:2px;margin-top:2px;">ESCALATION THRESHOLD</div>
+      <div style="font-size:28px;font-weight:900;color:#3e86f6;">PPT COUNT = 5</div>
+      <div style="font-size:10px;color:#3e86f6;font-weight:700;letter-spacing:2px;">ONE PAGER AUTO-GENERATED</div>
     </div>
     <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 10px;">
       <span style="color:#4a6fa5;">📅 Time</span><span>${exactDate}</span>
@@ -2601,27 +2706,19 @@ function showPptAlertPopup(d, highCount, result) {
     </div>`;
   statusEl.innerHTML = `
     📊 PPT: <span style="color:#3e86f6;">${fname}</span> (${sizeKB} KB)<br>
-    ${result.email==='sent'?'✅':'❌'} Email + PPT: ${result.email}<br>
-    ${result.telegram==='sent'?'✅':'❌'} Telegram: ${result.telegram}<br>
-    ${(result.telegramDoc||'')==='sent'?'✅':'❌'} Telegram PPT: ${result.telegramDoc||'N/A'}<br>
+    ${result.email==='sent'?'✅':'❌'} Email + PPT: ${result.email || 'N/A'}<br>
+    ${result.telegram==='sent'?'✅':'❌'} Telegram: ${result.telegram || 'N/A'}<br>
+    ${(result.telegramDoc||'')==='sent'?'✅':'❌'} Telegram PPT: ${result.telegramDoc || 'N/A'}<br>
     ⏱ Backend: ${result.elapsed || '?'}`;
   popup.style.display = 'flex';
 }
-function closePptAlertPopup() { document.getElementById('ppt-alert-popup').style.display = 'none'; }
+function closePptPopup() { document.getElementById('ppt-alert-popup').style.display = 'none'; }
 
-// ═══ BACKEND CALL ═══
+// ═══ FUNCTION 1: OCC=3 Backend Call (email + telegram, NO PPT) ═══
 async function callFlaskBackend(d, highCount) {
   try {
     const now = new Date();
-    const pad = n => String(n).padStart(2, '0');
-    let hh = now.getHours(), mm = now.getMinutes(), ss = now.getSeconds();
-    const ampm = hh >= 12 ? 'PM' : 'AM'; hh = hh % 12 || 12;
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     const today = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-    const highHistory = defects.filter(x => x.sev === 'HIGH').slice(-5).map(hd => ({
-      date: hd.datetime ? new Date(hd.datetime).toLocaleDateString('en-IN') : '-',
-      station: hd.mach||'-', defect: hd.dtype||'-', rootCause: hd.rc||'-', pressure: hd.press||'-'
-    }));
     const payload = {
       occ: String(highCount).padStart(2, '0'),
       model: (document.getElementById('op-model')||{}).value || 'Altroz / Nexon',
@@ -2631,41 +2728,74 @@ async function callFlaskBackend(d, highCount) {
       actions: (document.getElementById('op-actions')||{}).value || 'TBD',
       ecd: (document.getElementById('op-ecd')||{}).value || 'TBD',
       date: today, shift: d.shift || '-', side: d.door || '-',
-      inspector: d.op || '-', highHistory: highHistory
+      inspector: d.op || '-',
+      highHistory: defects.filter(x=>x.sev==='HIGH').slice(-5).map(h=>({
+        date:h.datetime?new Date(h.datetime).toLocaleDateString('en-IN'):'-',
+        station:h.mach||'-',defect:h.dtype||'-',rootCause:h.rc||'-',pressure:h.press||'-'
+      }))
     };
-    const label = highCount >= 5 ? 'OCC=5 ONE PAGER' : 'OCC=3 ALERT';
-    console.log(`📤 ${label}:`, JSON.stringify(payload));
-    showToast(`🚀 ${label} — sending to backend...`);
-    const response = await fetch(FLASK_BACKEND_URL, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+    console.log('📤 OCC=3 ALERT:', JSON.stringify(payload));
+    showToast('🚀 OCC=3 — sending to backend...');
+    const resp = await fetch(FLASK_BACKEND_URL, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
     });
-    const result = await response.json();
-    console.log(`📥 Backend:`, result);
+    const result = await resp.json();
+    console.log('📥 OCC=3 response:', result);
     if (result.success) {
-      let msg = '';
-      if (highCount >= 5 && result.ppt) {
-        msg = `✅ One Pager (${result.ppt?.sizeKB||'?'} KB) emailed + Telegram sent`;
-        showToast(msg);
-        showPptAlertPopup(d, highCount, result);
-      } else {
-        msg = `✅ OCC=${highCount} Alert! Email + Telegram sent`;
-        showToast(msg);
-      }
-      addAlert('high', `🚨 ${label}: ${d.dtype||'Open Hem'} on ${d.mach||'-'}`, `Backend: ${msg} | ${result.elapsed||''}`);
-    } else {
-      throw new Error(result.error || 'Backend failure');
-    }
+      showToast('✅ OCC=3 Alert! Email + Telegram sent');
+      addAlert('high', `🚨 OCC=3: ${d.dtype||'Open Hem'} on ${d.mach||'-'}`, `Backend: Email+Telegram | ${result.elapsed||''}`);
+    } else { throw new Error(result.error || 'Backend failure'); }
   } catch (err) {
-    console.error(`❌ Backend failed:`, err);
+    console.error('❌ OCC=3 backend failed:', err);
     showToast('⚠ Backend error: ' + (err.message || 'Network error'), true);
-    addAlert('warn', '⚠ Backend Alert Failed', err.message || 'check server');
+    addAlert('warn', '⚠ OCC=3 Backend Failed', err.message || 'check server');
+  }
+}
+
+// ═══ FUNCTION 2: PPT=5 Backend Call (One Pager PPT + email + telegram) ═══
+async function callFlaskBackendPPT(d, pptCount) {
+  try {
+    const now = new Date();
+    const today = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    const payload = {
+      occ: String(pptCount).padStart(2, '0'),
+      model: (document.getElementById('op-model')||{}).value || 'Altroz / Nexon',
+      failure: d.dtype || 'Open Hem', station: d.mach || 'ST-100',
+      rc: d.rc || 'Under Analysis', press: String(d.press || '180'),
+      raybg: (document.getElementById('op-raybg')||{}).value || 'R',
+      actions: (document.getElementById('op-actions')||{}).value || 'TBD',
+      ecd: (document.getElementById('op-ecd')||{}).value || 'TBD',
+      date: today, shift: d.shift || '-', side: d.door || '-',
+      inspector: d.op || '-',
+      highHistory: defects.filter(x=>x.sev==='HIGH').slice(-5).map(h=>({
+        date:h.datetime?new Date(h.datetime).toLocaleDateString('en-IN'):'-',
+        station:h.mach||'-',defect:h.dtype||'-',rootCause:h.rc||'-',pressure:h.press||'-'
+      }))
+    };
+    console.log('📤 PPT=5 ONE PAGER:', JSON.stringify(payload));
+    showToast('🚀 PPT=5 — generating One Pager...');
+    const resp = await fetch(FLASK_BACKEND_URL, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+    });
+    const result = await resp.json();
+    console.log('📥 PPT=5 response:', result);
+    if (result.success) {
+      const sizeKB = result.ppt?.sizeKB || '?';
+      showToast(`✅ One Pager (${sizeKB} KB) emailed + Telegram sent`);
+      showPptPopup(d, result);
+      addAlert('high', `📊 ONE PAGER: ${d.dtype||'Open Hem'} on ${d.mach||'-'}`, `PPT ${sizeKB}KB sent | ${result.elapsed||''}`);
+    } else { throw new Error(result.error || 'Backend failure'); }
+  } catch (err) {
+    console.error('❌ PPT=5 backend failed:', err);
+    showToast('⚠ PPT backend error: ' + (err.message || 'Network error'), true);
+    addAlert('warn', '⚠ PPT Backend Failed', err.message || 'check server');
   }
 }
 
 
 // ============ OCC ALERT COUNTDOWN ============
 let sessionHighCount = 0;
+let sessionPptCount = 0;  // Independent PPT counter — resets at 5
 
 function updateOCCCountdown(count) {
   const normalState = document.getElementById('occ-normal-state');
