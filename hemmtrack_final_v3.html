@@ -1356,6 +1356,19 @@ body.light-mode .rec-table tr:hover td { background:#ebf8ff !important; }
   </div>
 </div>
 
+<!-- PPT ALERT POPUP — SEPARATE from existing alert-popup -->
+<div id="ppt-alert-popup" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.82);z-index:10000;align-items:center;justify-content:center;">
+  <div style="background:linear-gradient(135deg,#0a1628,#0f1928);border:2px solid rgba(62,134,246,0.6);border-radius:20px;padding:28px;max-width:420px;width:92%;text-align:center;box-shadow:0 0 60px rgba(62,134,246,0.25);position:relative;">
+    <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,#3e86f6,transparent);border-radius:20px 20px 0 0;"></div>
+    <div style="font-size:44px;margin-bottom:6px;">📊</div>
+    <div style="font-size:18px;font-weight:900;color:#3e86f6;letter-spacing:2px;margin-bottom:2px;">ONE PAGER GENERATED</div>
+    <div style="font-size:11px;color:#4a6fa5;margin-bottom:16px;letter-spacing:1px;">AUTO-ESCALATION — OCC THRESHOLD</div>
+    <div id="ppt-alert-details" style="background:rgba(62,134,246,0.06);border:1px solid rgba(62,134,246,0.2);border-radius:10px;padding:14px;margin-bottom:14px;text-align:left;font-size:12px;color:#d4e8ff;line-height:1.9;"></div>
+    <div id="ppt-alert-status" style="background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.15);border-radius:10px;padding:12px;margin-bottom:16px;text-align:left;font-size:11px;line-height:2.1;color:#00ff88;font-weight:700;"></div>
+    <button onclick="closePptAlertPopup()" style="background:linear-gradient(135deg,rgba(62,134,246,0.15),rgba(62,134,246,0.05));border:1px solid rgba(62,134,246,0.3);color:#3e86f6;padding:11px 24px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;width:100%;">✕ CLOSE</button>
+  </div>
+</div>
+
 <script>
 // ============ DATA ============
 // ============ SAMPLE DEMO DATA ============
@@ -2538,7 +2551,7 @@ function showAlertPopup(d, highCount) {
     `⚡ Immediate action required!
 — HemmTrack Pro V2`
   );
-  document.getElementById('wa-link').href = `https://wa.me/${ALERT_WHATSAPP}?text=${waMsg}`;
+  try { document.getElementById('wa-link').href = `https://wa.me/${ALERT_WHATSAPP}?text=${waMsg}`; } catch(e) {}
 
   popup.style.display = 'flex';
 }
@@ -2552,126 +2565,101 @@ function closeAlertPopup() {
 // FLASK BACKEND API CALL — /check_occ
 // ============================================================
 // OCC=3 → Backend sends email + Telegram (no PPT)
-// OCC=5 → Backend generates PPT, sends email with PPT + Telegram
-// Both use the SAME endpoint, backend routes by OCC value
+// OCC=5 → Backend generates One Pager PPT, sends email + Telegram
+// SEPARATE from existing EmailJS/alert logic
 // ============================================================
 
-// 🔧 CHANGE THIS after Railway deployment
-const FLASK_BACKEND_URL = 'https://your-app.up.railway.app/check_occ';
+const FLASK_BACKEND_URL = 'https://hemmtrack-flask-backend-production.up.railway.app/check_occ';
 
+// ═══ PPT ALERT POPUP — Independent from existing alert-popup ═══
+function showPptAlertPopup(d, highCount, result) {
+  const popup = document.getElementById('ppt-alert-popup');
+  const details = document.getElementById('ppt-alert-details');
+  const statusEl = document.getElementById('ppt-alert-status');
+  if (!popup || !details || !statusEl) return;
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  let hh = now.getHours(), mm = now.getMinutes(), ss = now.getSeconds();
+  const ampm = hh >= 12 ? 'PM' : 'AM'; hh = hh % 12 || 12;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const exactDate = now.getDate()+' '+months[now.getMonth()]+' '+now.getFullYear()+', '+pad(hh)+':'+pad(mm)+':'+pad(ss)+' '+ampm;
+  const sizeKB = result.ppt?.sizeKB || '?';
+  const fname = result.ppt?.filename || 'OnePager.pptx';
+  details.innerHTML = `
+    <div style="text-align:center;margin-bottom:10px;">
+      <div style="font-size:28px;font-weight:900;color:#ff3d5a;">OCC = ${String(highCount).padStart(2,'0')}</div>
+      <div style="font-size:10px;color:#ff3d5a;font-weight:700;letter-spacing:2px;margin-top:2px;">ESCALATION THRESHOLD</div>
+    </div>
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 10px;">
+      <span style="color:#4a6fa5;">📅 Time</span><span>${exactDate}</span>
+      <span style="color:#4a6fa5;">🏭 Station</span><span>${d.mach || '-'}</span>
+      <span style="color:#4a6fa5;">🚪 Side</span><span>${d.door || '-'}</span>
+      <span style="color:#4a6fa5;">🔍 Defect</span><span style="color:#ff3d5a;font-weight:700;">${d.dtype || '-'}</span>
+      <span style="color:#4a6fa5;">🔧 Root Cause</span><span>${d.rc || '-'}</span>
+      <span style="color:#4a6fa5;">💨 Pressure</span><span>${d.press || '-'} Bar</span>
+      <span style="color:#4a6fa5;">👤 Inspector</span><span>${d.op || '-'}</span>
+    </div>`;
+  statusEl.innerHTML = `
+    📊 PPT: <span style="color:#3e86f6;">${fname}</span> (${sizeKB} KB)<br>
+    ${result.email==='sent'?'✅':'❌'} Email + PPT: ${result.email}<br>
+    ${result.telegram==='sent'?'✅':'❌'} Telegram: ${result.telegram}<br>
+    ${(result.telegramDoc||'')==='sent'?'✅':'❌'} Telegram PPT: ${result.telegramDoc||'N/A'}<br>
+    ⏱ Backend: ${result.elapsed || '?'}`;
+  popup.style.display = 'flex';
+}
+function closePptAlertPopup() { document.getElementById('ppt-alert-popup').style.display = 'none'; }
+
+// ═══ BACKEND CALL ═══
 async function callFlaskBackend(d, highCount) {
   try {
-    // Build timestamp
     const now = new Date();
     const pad = n => String(n).padStart(2, '0');
     let hh = now.getHours(), mm = now.getMinutes(), ss = now.getSeconds();
-    const ampm = hh >= 12 ? 'PM' : 'AM';
-    hh = hh % 12 || 12;
-    const exactTime = pad(hh) + ':' + pad(mm) + ':' + pad(ss) + ' ' + ampm;
+    const ampm = hh >= 12 ? 'PM' : 'AM'; hh = hh % 12 || 12;
     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const exactDate = now.getDate() + ' ' + months[now.getMonth()] + ' ' + now.getFullYear() + ', ' + exactTime;
     const today = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-
-    // Collect last 5 HIGH defects for escalation history (used by OCC=5)
-    const highHistory = defects
-      .filter(x => x.sev === 'HIGH')
-      .slice(-5)
-      .map(hd => ({
-        date: hd.datetime ? new Date(hd.datetime).toLocaleDateString('en-IN') : '-',
-        station: hd.mach || '-',
-        defect: hd.dtype || '-',
-        rootCause: hd.rc || '-',
-        pressure: hd.press || '-'
-      }));
-
-    // Build payload
+    const highHistory = defects.filter(x => x.sev === 'HIGH').slice(-5).map(hd => ({
+      date: hd.datetime ? new Date(hd.datetime).toLocaleDateString('en-IN') : '-',
+      station: hd.mach||'-', defect: hd.dtype||'-', rootCause: hd.rc||'-', pressure: hd.press||'-'
+    }));
     const payload = {
-      occ:       String(highCount).padStart(2, '0'),
-      model:     (document.getElementById('op-model') || {}).value || 'Altroz / Nexon',
-      failure:   d.dtype || 'Open Hem',
-      station:   d.mach || 'ST-100',
-      rc:        d.rc || 'Under Analysis',
-      press:     String(d.press || '180'),
-      raybg:     (document.getElementById('op-raybg') || {}).value || 'R',
-      actions:   (document.getElementById('op-actions') || {}).value || 'TBD',
-      ecd:       (document.getElementById('op-ecd') || {}).value || 'TBD',
-      date:      today,
-      shift:     d.shift || '-',
-      side:      d.door || '-',
-      inspector: d.op || '-',
-      highHistory: highHistory
+      occ: String(highCount).padStart(2, '0'),
+      model: (document.getElementById('op-model')||{}).value || 'Altroz / Nexon',
+      failure: d.dtype || 'Open Hem', station: d.mach || 'ST-100',
+      rc: d.rc || 'Under Analysis', press: String(d.press || '180'),
+      raybg: (document.getElementById('op-raybg')||{}).value || 'R',
+      actions: (document.getElementById('op-actions')||{}).value || 'TBD',
+      ecd: (document.getElementById('op-ecd')||{}).value || 'TBD',
+      date: today, shift: d.shift || '-', side: d.door || '-',
+      inspector: d.op || '-', highHistory: highHistory
     };
-
-    const label = highCount === 5 ? 'OCC=5 ESCALATION' : 'OCC=3 ALERT';
-    console.log(`📤 ${label} payload:`, JSON.stringify(payload));
+    const label = highCount >= 5 ? 'OCC=5 ONE PAGER' : 'OCC=3 ALERT';
+    console.log(`📤 ${label}:`, JSON.stringify(payload));
     showToast(`🚀 ${label} — sending to backend...`);
-
-    // ── Fetch API call ──
     const response = await fetch(FLASK_BACKEND_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-
     const result = await response.json();
-    console.log(`📥 Backend response:`, result);
-
+    console.log(`📥 Backend:`, result);
     if (result.success) {
-      // Build success message
       let msg = '';
-      if (highCount === 5) {
-        const sizeKB = result.ppt?.sizeKB || '?';
-        msg = `✅ OCC=5 Escalation done! PPT (${sizeKB} KB) emailed + Telegram sent`;
+      if (highCount >= 5 && result.ppt) {
+        msg = `✅ One Pager (${result.ppt?.sizeKB||'?'} KB) emailed + Telegram sent`;
+        showToast(msg);
+        showPptAlertPopup(d, highCount, result);
       } else {
-        msg = `✅ OCC=3 Alert done! Email + Telegram sent via backend`;
+        msg = `✅ OCC=${highCount} Alert! Email + Telegram sent`;
+        showToast(msg);
       }
-      showToast(msg);
-
-      // Show popup for OCC=5 escalation
-      if (highCount === 5) {
-        const popup = document.getElementById('alert-popup');
-        const details = document.getElementById('alert-popup-details');
-        if (popup && details) {
-          details.innerHTML = `
-            <div style="text-align:center;margin-bottom:12px;">
-              <span style="font-size:36px;">🚨</span>
-              <div style="font-size:22px;font-weight:900;color:#8B0000;margin-top:4px;">OCC = ${highCount}</div>
-              <div style="font-size:12px;color:#ff3d5a;font-weight:700;letter-spacing:2px;">ESCALATION LEVEL REACHED</div>
-            </div>
-            <div style="background:rgba(139,0,0,0.1);border:1px solid rgba(139,0,0,0.4);border-radius:8px;padding:12px;margin-bottom:10px;font-size:12px;color:var(--text);line-height:1.8;">
-              📅 Time: ${exactDate}<br>
-              🏭 Station: ${d.mach || '-'}<br>
-              🚪 Side: ${d.door || '-'}<br>
-              🔍 Defect: ${d.dtype || '-'}<br>
-              🔧 Root Cause: ${d.rc || '-'}<br>
-              💨 Pressure: ${d.press || '-'} Bar<br>
-              👤 Inspector: ${d.op || '-'}
-            </div>
-            <div style="font-size:11px;line-height:2;color:#00ff88;font-weight:700;">
-              ✅ PPT generated on server (${result.ppt?.sizeKB || '?'} KB)<br>
-              ✅ Email with PPT attachment sent<br>
-              ✅ Telegram escalation alert sent<br>
-              ⏱ Backend: ${result.elapsed || '?'}
-            </div>
-          `;
-          popup.style.display = 'flex';
-        }
-      }
-
-      // Log to alert system
-      addAlert('high',
-        `🚨 ${label}: ${d.dtype || 'Open Hem'} on ${d.mach || '-'}`,
-        `Backend: ${msg} | ${result.elapsed || ''}`
-      );
-
+      addAlert('high', `🚨 ${label}: ${d.dtype||'Open Hem'} on ${d.mach||'-'}`, `Backend: ${msg} | ${result.elapsed||''}`);
     } else {
-      throw new Error(result.error || 'Backend returned failure');
+      throw new Error(result.error || 'Backend failure');
     }
-
   } catch (err) {
-    console.error(`❌ Backend call failed:`, err);
+    console.error(`❌ Backend failed:`, err);
     showToast('⚠ Backend error: ' + (err.message || 'Network error'), true);
-    addAlert('warn', '⚠ Backend Alert Failed', err.message || 'check internet/server');
+    addAlert('warn', '⚠ Backend Alert Failed', err.message || 'check server');
   }
 }
 
