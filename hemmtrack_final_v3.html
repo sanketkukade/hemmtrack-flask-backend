@@ -284,6 +284,169 @@ tr:hover td{background:rgba(0,229,255,.02)}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:var(--bg)}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* ══════════ LIVE DASHBOARD ══════════ */
+@keyframes ld-kpiPop {
+  0%{transform:scale(1)} 40%{transform:scale(1.18)} 70%{transform:scale(0.96)} 100%{transform:scale(1)}
+}
+.ld-kpi-pop{animation:ld-kpiPop 0.45s cubic-bezier(0.34,1.56,0.64,1)}
+
+@keyframes ld-cardEntrance {
+  0%{opacity:0;transform:translateY(28px) scale(0.97)} 100%{opacity:1;transform:translateY(0) scale(1)}
+}
+.ld-card-anim{opacity:0;animation:ld-cardEntrance 0.55s cubic-bezier(0.22,1,0.36,1) forwards}
+
+@keyframes ld-shimmer {
+  0%{background-position:-400px 0} 100%{background-position:400px 0}
+}
+.ld-shimmer{
+  background:linear-gradient(90deg,var(--card) 25%,rgba(0,229,255,0.06) 37%,var(--card) 63%);
+  background-size:800px 100%;animation:ld-shimmer 1.8s infinite linear;
+}
+
+@keyframes ld-badgePulse {
+  0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(0,229,255,0.5)} 50%{opacity:0.7;box-shadow:0 0 0 6px rgba(0,229,255,0)}
+}
+.ld-badge-pulse{animation:ld-badgePulse 1.5s ease-in-out infinite}
+
+@keyframes ld-offlinePulse {
+  0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(255,61,90,0.6)} 50%{opacity:0.65;box-shadow:0 0 0 8px rgba(255,61,90,0)}
+}
+.ld-offline-pulse{animation:ld-offlinePulse 1.2s ease-in-out infinite}
+
+@keyframes ld-statusShake {
+  0%,100%{transform:translateX(0)} 15%{transform:translateX(-6px)} 30%{transform:translateX(5px)}
+  45%{transform:translateX(-4px)} 60%{transform:translateX(3px)} 75%{transform:translateX(-2px)}
+}
+.ld-status-shake{animation:ld-statusShake 0.5s ease-in-out}
+
+@keyframes ld-rowSlideIn {
+  0%{opacity:0;transform:translateX(-20px)} 100%{opacity:1;transform:translateX(0)}
+}
+.ld-row-slide{animation:ld-rowSlideIn 0.4s cubic-bezier(0.22,1,0.36,1) forwards;opacity:0}
+
+@keyframes ld-spin {0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)}}
+.ld-spin{animation:ld-spin 0.8s linear infinite}
+
+@keyframes ld-liveFloat {0%,100%{transform:translateY(0)} 50%{transform:translateY(-2px)}}
+
+/* Live Dashboard Layout */
+.ld-topbar{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  padding:14px 0;margin-bottom:16px;border-bottom:1px solid var(--border);
+}
+.ld-topbar-left{display:flex;align-items:center;gap:12px}
+.ld-topbar-title{font-family:var(--font-h);font-size:13px;font-weight:900;color:var(--cyan);letter-spacing:2px}
+.ld-topbar-sub{font-size:10px;color:var(--muted)}
+.ld-topbar-right{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+
+.ld-conn{
+  display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;
+  padding:4px 12px;border-radius:20px;font-family:var(--font-m);
+}
+.ld-conn.online{color:var(--green);background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.25)}
+.ld-conn.offline{color:var(--red);background:rgba(255,61,90,0.08);border:1px solid rgba(255,61,90,0.25)}
+.ld-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0}
+.ld-conn.online .ld-dot{animation:ld-liveFloat 2s ease-in-out infinite}
+.ld-conn.offline .ld-dot{animation:ld-offlinePulse 1.2s ease-in-out infinite;background:var(--red)}
+
+.ld-btn-refresh{
+  background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.25);color:var(--cyan);
+  padding:5px 14px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;gap:6px;font-family:var(--font-m);transition:all .2s;
+}
+.ld-btn-refresh:hover{background:rgba(0,229,255,0.15);border-color:var(--cyan)}
+.ld-btn-refresh svg{width:14px;height:14px;transition:all .2s}
+
+.ld-last-updated{font-size:10px;color:var(--muted);font-family:var(--font-m)}
+
+/* Status Bar */
+.ld-status{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:7px 16px;font-size:11px;font-weight:700;border-radius:8px;margin-bottom:16px;
+  font-family:var(--font-m);transition:all .3s;
+}
+.ld-status.ok{background:rgba(0,255,136,0.06);color:var(--green);border:1px solid rgba(0,255,136,0.15)}
+.ld-status.err{background:rgba(255,61,90,0.06);color:var(--red);border:1px solid rgba(255,61,90,0.15)}
+.ld-status.load{background:rgba(0,229,255,0.06);color:var(--cyan);border:1px solid rgba(0,229,255,0.15)}
+
+/* Section headers */
+.ld-sec{display:flex;align-items:center;gap:10px;margin:20px 0 12px}
+.ld-sec h3{font-family:var(--font-h);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--muted)}
+.ld-sec .ld-line{flex:1;height:1px;background:var(--border)}
+
+/* KPI Grid for live dashboard */
+.ld-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px}
+.ld-kpi{
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:16px;position:relative;overflow:hidden;transition:all .3s;cursor:default;
+}
+.ld-kpi:hover{background:var(--s2);box-shadow:0 8px 24px rgba(0,0,0,0.4),0 0 0 1px rgba(0,229,255,0.2);transform:translateY(-2px)}
+.ld-kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.ld-kpi.c::before{background:linear-gradient(90deg,var(--cyan),#0066ff)}
+.ld-kpi.r::before{background:linear-gradient(90deg,var(--red),#cc0033)}
+.ld-kpi.g::before{background:linear-gradient(90deg,var(--green),#00aa55)}
+.ld-kpi.a::before{background:linear-gradient(90deg,var(--amber),#ff7700)}
+.ld-kpi.p::before{background:linear-gradient(90deg,var(--purple),#7700cc)}
+.ld-kpi-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px}
+.ld-kpi-val{font-family:var(--font-m);font-size:28px;font-weight:700;line-height:1;margin-bottom:4px;transition:color .2s}
+.ld-kpi.c .ld-kpi-val{color:var(--cyan)} .ld-kpi.r .ld-kpi-val{color:var(--red)}
+.ld-kpi.g .ld-kpi-val{color:var(--green)} .ld-kpi.a .ld-kpi-val{color:var(--amber)}
+.ld-kpi.p .ld-kpi-val{color:var(--purple)}
+.ld-kpi-delta{font-size:10px;font-weight:700;display:flex;align-items:center;gap:4px}
+.ld-kpi-delta.up{color:var(--red)} .ld-kpi-delta.down{color:var(--green)} .ld-kpi-delta.flat{color:var(--muted)}
+
+/* Chart panels */
+.ld-chart-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:14px;margin-bottom:20px}
+.ld-chart-panel{
+  background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;transition:all .3s;
+}
+.ld-chart-panel:hover{background:var(--s2);box-shadow:0 8px 24px rgba(0,0,0,0.4),0 0 0 1px rgba(0,229,255,0.15);transform:translateY(-2px)}
+.ld-chart-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.ld-chart-title{font-size:13px;font-weight:700;color:var(--text)}
+.ld-chart-badge{
+  font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+  padding:3px 8px;border-radius:4px;background:rgba(0,229,255,0.08);color:var(--cyan);
+  font-family:var(--font-m);
+}
+.ld-chart-wrap{position:relative;width:100%;height:240px}
+.ld-chart-wrap canvas{width:100%!important;height:100%!important}
+
+/* Table */
+.ld-table-panel{
+  background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:all .3s;
+}
+.ld-table-panel:hover{box-shadow:0 8px 24px rgba(0,0,0,0.4),0 0 0 1px rgba(0,229,255,0.15)}
+.ld-table-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)}
+.ld-table-title{font-size:13px;font-weight:700}
+.ld-tbl-wrap{overflow-x:auto}
+.ld-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.ld-tbl thead th{
+  padding:8px 14px;text-align:left;font-weight:700;font-size:9px;text-transform:uppercase;
+  letter-spacing:1px;color:var(--muted);background:rgba(0,0,0,0.2);
+  border-bottom:1px solid var(--border);white-space:nowrap;
+  font-family:var(--font-m);
+}
+.ld-tbl tbody td{padding:8px 14px;border-bottom:1px solid rgba(30,48,80,0.4);color:var(--muted);white-space:nowrap}
+.ld-tbl tbody tr{transition:background .2s}
+.ld-tbl tbody tr:hover{background:rgba(0,229,255,0.03)}
+.ld-sev-badge{
+  display:inline-block;padding:2px 8px;border-radius:4px;
+  font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;
+  font-family:var(--font-m);
+}
+.ld-sev-badge.high{background:rgba(255,61,90,0.12);color:var(--red);border:1px solid var(--red)}
+.ld-sev-badge.medium{background:rgba(255,170,0,0.12);color:var(--amber);border:1px solid var(--amber)}
+.ld-sev-badge.low{background:rgba(0,255,136,0.12);color:var(--green);border:1px solid var(--green)}
+
+@media(max-width:900px){
+  .ld-chart-grid{grid-template-columns:1fr}
+  .ld-kpi-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:540px){
+  .ld-kpi-grid{grid-template-columns:1fr}
+  .ld-topbar-right .ld-last-updated{display:none}
+}
 </style>
 <style>
 body.light-mode {
@@ -789,48 +952,134 @@ body.light-mode .rec-table tr:hover td { background:#ebf8ff !important; }
   </div>
 </div>
 
-<!-- ===== TAB: DASHBOARD ===== -->
+<!-- ===== TAB: DASHBOARD (LIVE) ===== -->
 <div class="panel" id="tab-dashboard">
+
+  <!-- Live Dashboard Topbar -->
+  <div class="ld-topbar">
+    <div class="ld-topbar-left">
+      <div style="width:36px;height:36px;background:linear-gradient(135deg,var(--cyan),#0066ff);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 16px rgba(0,229,255,0.3)">📊</div>
+      <div>
+        <div class="ld-topbar-title">LIVE DASHBOARD</div>
+        <div class="ld-topbar-sub">Real-time defect monitoring · /get_stats API</div>
+      </div>
+    </div>
+    <div class="ld-topbar-right">
+      <div id="ld-conn" class="ld-conn online">
+        <span class="ld-dot"></span>
+        <span id="ld-conn-label">Live</span>
+      </div>
+      <button class="ld-btn-refresh" id="ld-btn-refresh" title="Refresh data">
+        <svg id="ld-refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+        REFRESH
+      </button>
+      <span class="ld-last-updated" id="ld-last-updated">—</span>
+    </div>
+  </div>
+
+  <!-- Status Bar -->
+  <div id="ld-status" class="ld-status ok">
+    <span id="ld-status-icon">✓</span>
+    <span id="ld-status-text">System operational — all stations reporting</span>
+  </div>
+
+  <!-- KPI Section -->
+  <div class="ld-sec"><h3>Key Metrics</h3><div class="ld-line"></div></div>
+  <div class="ld-kpi-grid">
+    <div class="ld-kpi c ld-card-anim" style="animation-delay:0.05s">
+      <div class="ld-kpi-label">Total Defects</div>
+      <div class="ld-kpi-val" id="ld-kpi-total">—</div>
+      <div class="ld-kpi-delta flat" id="ld-kpi-total-d">Awaiting data</div>
+    </div>
+    <div class="ld-kpi r ld-card-anim" style="animation-delay:0.12s">
+      <div class="ld-kpi-label">High Severity</div>
+      <div class="ld-kpi-val" id="ld-kpi-high">—</div>
+      <div class="ld-kpi-delta flat" id="ld-kpi-high-d">Awaiting data</div>
+    </div>
+    <div class="ld-kpi g ld-card-anim" style="animation-delay:0.19s">
+      <div class="ld-kpi-label">First Pass Yield</div>
+      <div class="ld-kpi-val" id="ld-kpi-fpy">—</div>
+      <div class="ld-kpi-delta flat" id="ld-kpi-fpy-d">Awaiting data</div>
+    </div>
+    <div class="ld-kpi a ld-card-anim" style="animation-delay:0.26s">
+      <div class="ld-kpi-label">Open Actions</div>
+      <div class="ld-kpi-val" id="ld-kpi-actions">—</div>
+      <div class="ld-kpi-delta flat" id="ld-kpi-actions-d">Awaiting data</div>
+    </div>
+    <div class="ld-kpi p ld-card-anim" style="animation-delay:0.33s">
+      <div class="ld-kpi-label">Cpk Index</div>
+      <div class="ld-kpi-val" id="ld-kpi-cpk">—</div>
+      <div class="ld-kpi-delta flat" id="ld-kpi-cpk-d">Awaiting data</div>
+    </div>
+  </div>
+
+  <!-- Charts Section -->
+  <div class="ld-sec"><h3>Analytics</h3><div class="ld-line"></div></div>
+  <div class="ld-chart-grid">
+    <div class="ld-chart-panel ld-card-anim" style="animation-delay:0.38s">
+      <div class="ld-chart-head">
+        <span class="ld-chart-title">Station-wise Defects</span>
+        <span class="ld-chart-badge" id="ld-badge-station">LIVE</span>
+      </div>
+      <div class="ld-chart-wrap"><canvas id="ld-ch-station"></canvas></div>
+    </div>
+    <div class="ld-chart-panel ld-card-anim" style="animation-delay:0.44s">
+      <div class="ld-chart-head">
+        <span class="ld-chart-title">Defect Type Distribution</span>
+        <span class="ld-chart-badge" id="ld-badge-type">LIVE</span>
+      </div>
+      <div class="ld-chart-wrap"><canvas id="ld-ch-type"></canvas></div>
+    </div>
+    <div class="ld-chart-panel ld-card-anim" style="animation-delay:0.50s">
+      <div class="ld-chart-head">
+        <span class="ld-chart-title">Shift-wise Trend</span>
+        <span class="ld-chart-badge" id="ld-badge-shift">LIVE</span>
+      </div>
+      <div class="ld-chart-wrap"><canvas id="ld-ch-shift"></canvas></div>
+    </div>
+    <div class="ld-chart-panel ld-card-anim" style="animation-delay:0.56s">
+      <div class="ld-chart-head">
+        <span class="ld-chart-title">Pareto Analysis</span>
+        <span class="ld-chart-badge">ANALYSIS</span>
+      </div>
+      <div class="ld-chart-wrap"><canvas id="ld-ch-pareto"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Recent Defects Table -->
+  <div class="ld-sec"><h3>Recent Defect Log</h3><div class="ld-line"></div></div>
+  <div class="ld-table-panel ld-card-anim" style="animation-delay:0.62s">
+    <div class="ld-table-head">
+      <span class="ld-table-title">Latest Entries</span>
+      <span class="ld-chart-badge" id="ld-badge-table">LIVE</span>
+    </div>
+    <div class="ld-tbl-wrap">
+      <table class="ld-tbl">
+        <thead><tr>
+          <th>Time</th><th>Station</th><th>Defect Type</th><th>Severity</th>
+          <th>Inspector</th><th>Shift</th><th>Status</th>
+        </tr></thead>
+        <tbody id="ld-table-body">
+          <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px;">Loading data…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- Dashboard Action Buttons -->
-  <div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
-    <button onclick="exportDashboardPDF()" style="
-      padding:9px 20px;border-radius:10px;border:none;
-      background:linear-gradient(135deg,#ff3d5a,#cc0000);
-      color:#fff;font-weight:900;cursor:pointer;font-size:13px;
-      display:flex;align-items:center;gap:8px;
-    ">📄 Export PDF</button>
-    <button onclick="sendDashboardEmail()" style="
-      padding:9px 20px;border-radius:10px;border:none;
-      background:linear-gradient(135deg,#00e5ff,#0066ff);
-      color:#000;font-weight:900;cursor:pointer;font-size:13px;
-      display:flex;align-items:center;gap:8px;
-    ">📧 Email Report</button>
+  <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px;flex-wrap:wrap;">
+    <button onclick="exportDashboardPDF()" class="btn btn-r btn-sm" style="display:flex;align-items:center;gap:6px">📄 Export PDF</button>
+    <button onclick="sendDashboardEmail()" class="btn btn-c btn-sm" style="display:flex;align-items:center;gap:6px">📧 Email Report</button>
   </div>
-  <div class="g4" style="margin-bottom:16px">
-    <div class="kpi c"><div class="kpi-ico">📦</div><div class="kpi-v" id="kpi-total">0</div><div class="kpi-l">Total Defects</div></div>
-    <div class="kpi r"><div class="kpi-ico">⚠️</div><div class="kpi-v" id="kpi-occ">0%</div><div class="kpi-l">OCC Rate</div></div>
-    <div class="kpi a"><div class="kpi-ico">🔴</div><div class="kpi-v" id="kpi-high">0</div><div class="kpi-l">High Severity</div></div>
-    <div class="kpi g"><div class="kpi-ico">🏭</div><div class="kpi-v" id="kpi-prod">0</div><div class="kpi-l">Total Production</div></div>
-  </div>
-  <div class="g2">
-    <div class="card"><div class="ctitle"><span class="dot"></span>Defects by Type</div><div class="ch"><canvas id="ch-type"></canvas></div></div>
-    <div class="card"><div class="ctitle"><span class="dot"></span>Daily Trend</div><div class="ch"><canvas id="ch-trend"></canvas></div></div>
-  </div>
-  <div class="g2">
-    <div class="card"><div class="ctitle"><span class="dot"></span>Severity Distribution</div><div class="ch"><canvas id="ch-sev"></canvas></div></div>
-    <div class="card"><div class="ctitle"><span class="dot"></span>Machine-wise Defects</div><div class="ch"><canvas id="ch-mach"></canvas></div></div>
-  </div>
-  <div class="card"><div class="ctitle"><span class="dot"></span>Shift Comparison</div><div class="ch" style="height:160px"><canvas id="ch-shift"></canvas></div></div>
+
 </div>
 
 <!-- MONTHLY OCC TREND CARD -->
 <div class="card" style="margin:0 0 16px;">
   <div class="ctitle">📅 Monthly OCC Trend — Improvement Analysis</div>
-  
-  <!-- Month wise bars -->
   <div id="monthly-trend-content" style="margin-top:12px;"></div>
-  
-  <!-- Summary -->
   <div id="monthly-trend-summary" style="margin-top:16px;"></div>
 </div>
 
@@ -851,8 +1100,6 @@ body.light-mode .rec-table tr:hover td { background:#ebf8ff !important; }
       <div style="font-size:11px;color:#4a6fa5;">Mar 2026 Data</div>
     </div>
   </div>
-
-  <!-- Visual bar comparison -->
   <div style="margin-bottom:12px;">
     <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
       <span style="font-size:12px;color:#ff3d5a;font-weight:700;">Before: 8.2%</span>
@@ -875,8 +1122,6 @@ body.light-mode .rec-table tr:hover td { background:#ebf8ff !important; }
       </div>
     </div>
   </div>
-
-  <!-- Improvement highlight -->
   <div style="background:linear-gradient(135deg,rgba(0,229,255,0.08),rgba(0,255,136,0.06));border:1px solid rgba(0,229,255,0.2);border-radius:10px;padding:14px;text-align:center;">
     <div style="font-size:13px;color:#4a6fa5;margin-bottom:6px;">Total Improvement Achieved</div>
     <div style="font-size:36px;font-weight:900;color:#00e5ff;">83% ↓</div>
@@ -1988,6 +2233,7 @@ function renderTable(){
 function delD(id){if(!confirm('Delete?'))return;defects=defects.filter(d=>d.id!==id);save();updateAll();showToast('Deleted.');}
 
 // ============ UPDATE ALL ============
+function _safeSet(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
 function updateAll(){
   try { updateBlinkIndicator(); } catch(e) {}
   try { updateMonthlyTrend(); } catch(e) {}
@@ -1995,31 +2241,31 @@ function updateAll(){
   const td=defects.filter(d=>d.datetime.slice(0,10)===today);
   const totalProd=defects.reduce((s,d)=>s+d.prod,0);
   const occ=totalProd>0?((defects.length/totalProd)*100).toFixed(2):'0.00';
-  document.getElementById('h-total').textContent=defects.length;
-  document.getElementById('h-occ').textContent=occ+'%';
-  document.getElementById('h-today').textContent=td.length;
-  document.getElementById('kpi-total').textContent=defects.length;
-  document.getElementById('kpi-occ').textContent=occ+'%';
-  document.getElementById('kpi-high').textContent=defects.filter(d=>d.sev==='HIGH').length;
-  document.getElementById('kpi-prod').textContent=totalProd;
-  document.getElementById('qs-h').textContent=td.filter(d=>d.sev==='HIGH').length;
-  document.getElementById('qs-m').textContent=td.filter(d=>d.sev==='MED').length;
-  document.getElementById('qs-l').textContent=td.filter(d=>d.sev==='LOW').length;
+  _safeSet('h-total', defects.length);
+  _safeSet('h-occ', occ+'%');
+  _safeSet('h-today', td.length);
+  _safeSet('qs-h', td.filter(d=>d.sev==='HIGH').length);
+  _safeSet('qs-m', td.filter(d=>d.sev==='MED').length);
+  _safeSet('qs-l', td.filter(d=>d.sev==='LOW').length);
   const tp=td.reduce((s,d)=>s+d.prod,0);
-  document.getElementById('qs-occ').textContent=tp>0?((td.length/tp)*100).toFixed(1)+'%':'0%';
+  _safeSet('qs-occ', tp>0?((td.length/tp)*100).toFixed(1)+'%':'0%');
   const rl=document.getElementById('recent-list');
-  if(!defects.length){rl.textContent='No entries yet...';}
-  else{rl.innerHTML=defects.slice(-4).reverse().map(d=>`
-    <div style="padding:8px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-      <div>
-        <span style="font-weight:700;font-size:13px">${d.dtype}</span>
-        <span style="color:var(--muted);font-size:11px;margin-left:8px">${d.mach}</span>
-        ${d.imgs&&d.imgs.length?`<span style="color:var(--cyan);font-size:11px;margin-left:4px">📷</span>`:''}
+  if(rl){
+    if(!defects.length){rl.textContent='No entries yet...';}
+    else{rl.innerHTML=defects.slice(-4).reverse().map(d=>`
+      <div style="padding:8px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <span style="font-weight:700;font-size:13px">${d.dtype}</span>
+          <span style="color:var(--muted);font-size:11px;margin-left:8px">${d.mach}</span>
+          ${d.imgs&&d.imgs.length?`<span style="color:var(--cyan);font-size:11px;margin-left:4px">📷</span>`:''}
+        </div>
+        <span class="badge ${d.sev==='HIGH'?'bh':d.sev==='MED'?'bm':'bl'}">${d.sev}</span>
       </div>
-      <span class="badge ${d.sev==='HIGH'?'bh':d.sev==='MED'?'bm':'bl'}">${d.sev}</span>
-    </div>
-  `).join('');}
+    `).join('');}
+  }
   renderCharts();renderPareto();renderTable();renderWhyList();renderAlerts();
+  // Also refresh live dashboard if it's visible
+  try { ldRefreshFromLocal(); } catch(e) {}
 }
 
 // ============ EXPORT ============
@@ -2049,8 +2295,8 @@ function showTab(id,btn){
   if(panEl) panEl.classList.add('on');
   if(btn) btn.classList.add('on');
   // Destroy existing charts so they re-render cleanly on visible canvas
-  Object.keys(charts).forEach(k=>{if(charts[k]){charts[k].destroy();delete charts[k];}});
-  if(id==='dashboard') setTimeout(()=>renderCharts(),120);
+  Object.keys(charts).forEach(k=>{if(charts[k]){try{charts[k].destroy();}catch(e){} delete charts[k];}});
+  if(id==='dashboard') setTimeout(()=>{renderCharts();ldFetchData();},120);
   if(id==='spc')       setTimeout(()=>renderSPC(),120);
   if(id==='ml'){
     // Set default values so ML shows a sample prediction on open
@@ -2609,7 +2855,45 @@ function closeAlertPopup() {
 // callFlaskBackendPPT() → PPT=5 → One Pager PPT + Email + Telegram
 // ============================================================
 
-const FLASK_BACKEND_URL = 'https://hemmtrack-flask-backend-production.up.railway.app/check_occ';
+// ═══ SMART BACKEND URL DETECTION ═══
+// Priority: 1) Manual override  2) Railway deployed  3) localhost dev
+const FLASK_BACKEND_URLS = [
+  'https://hemmtrack-flask-backend-production.up.railway.app',
+  'http://localhost:5000',
+  'http://127.0.0.1:5000'
+];
+let _activeBackendURL = null; // cached after first successful hit
+
+async function getBackendURL() {
+  // If we already found a working URL, reuse it
+  if (_activeBackendURL) return _activeBackendURL;
+
+  // Try each URL with a fast health check
+  for (const base of FLASK_BACKEND_URLS) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+      const resp = await fetch(base + '/', {
+        method: 'GET',
+        signal: controller.signal,
+        mode: 'cors'
+      });
+      clearTimeout(timeout);
+      if (resp.ok) {
+        _activeBackendURL = base;
+        console.log('✅ Backend discovered:', base);
+        return base;
+      }
+    } catch (e) {
+      console.log('⏭ Backend not reachable:', base, e.message);
+    }
+  }
+  // Fallback to Railway URL even if health check failed
+  // (might still accept POST even if GET / is down)
+  _activeBackendURL = FLASK_BACKEND_URLS[0];
+  console.warn('⚠ No backend responded to health check, defaulting to:', _activeBackendURL);
+  return _activeBackendURL;
+}
 
 // ═══ PPT COUNTDOWN UI — updates the blue PPT box in header ═══
 function updatePPTCountdown(count) {
@@ -2736,19 +3020,39 @@ async function callFlaskBackend(d, highCount) {
     };
     console.log('📤 OCC=3 ALERT:', JSON.stringify(payload));
     showToast('🚀 OCC=3 — sending to backend...');
-    const resp = await fetch(FLASK_BACKEND_URL, {
-      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+
+    const baseURL = await getBackendURL();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
+    const resp = await fetch(baseURL + '/check_occ', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      mode: 'cors',
+      signal: controller.signal
     });
+    clearTimeout(timeout);
+
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+
     const result = await resp.json();
     console.log('📥 OCC=3 response:', result);
     if (result.success) {
       showToast('✅ OCC=3 Alert! Email + Telegram sent');
       addAlert('high', `🚨 OCC=3: ${d.dtype||'Open Hem'} on ${d.mach||'-'}`, `Backend: Email+Telegram | ${result.elapsed||''}`);
-    } else { throw new Error(result.error || 'Backend failure'); }
+    } else { throw new Error(result.error || 'Backend returned failure'); }
   } catch (err) {
     console.error('❌ OCC=3 backend failed:', err);
-    showToast('⚠ Backend error: ' + (err.message || 'Network error'), true);
-    addAlert('warn', '⚠ OCC=3 Backend Failed', err.message || 'check server');
+    // Specific error messages for common issues
+    let userMsg = err.message || 'Network error';
+    if (err.name === 'AbortError') userMsg = 'Request timed out (15s) — backend may be sleeping on Railway free tier. Try again.';
+    else if (err.message === 'Failed to fetch') userMsg = 'Cannot reach backend — check if Railway service is active, or CORS is blocking the request.';
+    else if (err.message.includes('NetworkError')) userMsg = 'Network error — check internet connection.';
+    showToast('⚠ Backend: ' + userMsg, true);
+    addAlert('warn', '⚠ OCC=3 Backend Failed', userMsg);
+    // Reset cached URL so next attempt retries discovery
+    _activeBackendURL = null;
   }
 }
 
@@ -2774,9 +3078,22 @@ async function callFlaskBackendPPT(d, pptCount) {
     };
     console.log('📤 PPT=5 ONE PAGER:', JSON.stringify(payload));
     showToast('🚀 PPT=5 — generating One Pager...');
-    const resp = await fetch(FLASK_BACKEND_URL, {
-      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+
+    const baseURL = await getBackendURL();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000); // PPT needs more time
+
+    const resp = await fetch(baseURL + '/check_occ', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      mode: 'cors',
+      signal: controller.signal
     });
+    clearTimeout(timeout);
+
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+
     const result = await resp.json();
     console.log('📥 PPT=5 response:', result);
     if (result.success) {
@@ -2784,11 +3101,16 @@ async function callFlaskBackendPPT(d, pptCount) {
       showToast(`✅ One Pager (${sizeKB} KB) emailed + Telegram sent`);
       showPptPopup(d, result);
       addAlert('high', `📊 ONE PAGER: ${d.dtype||'Open Hem'} on ${d.mach||'-'}`, `PPT ${sizeKB}KB sent | ${result.elapsed||''}`);
-    } else { throw new Error(result.error || 'Backend failure'); }
+    } else { throw new Error(result.error || 'Backend returned failure'); }
   } catch (err) {
     console.error('❌ PPT=5 backend failed:', err);
-    showToast('⚠ PPT backend error: ' + (err.message || 'Network error'), true);
-    addAlert('warn', '⚠ PPT Backend Failed', err.message || 'check server');
+    let userMsg = err.message || 'Network error';
+    if (err.name === 'AbortError') userMsg = 'Request timed out (30s) — PPT generation may need longer. Railway free tier sleeps after inactivity — try again.';
+    else if (err.message === 'Failed to fetch') userMsg = 'Cannot reach backend — possible causes: (1) Railway service sleeping/stopped, (2) CORS not configured, (3) Network issue. Open Railway dashboard to check.';
+    else if (err.message.includes('NetworkError')) userMsg = 'Network error — check internet connection.';
+    showToast('⚠ PPT error: ' + userMsg, true);
+    addAlert('warn', '⚠ PPT Backend Failed', userMsg);
+    _activeBackendURL = null;
   }
 }
 
@@ -3868,10 +4190,12 @@ function sendAttendanceEmail() {
 
 // ============ DASHBOARD EMAIL REPORT ============
 function sendDashboardEmail() {
-  const total = document.getElementById('kpi-total')?.textContent || '0';
-  const occ = document.getElementById('kpi-occ')?.textContent || '0%';
-  const alerts = document.getElementById('kpi-alerts')?.textContent || '0';
-  const today = document.getElementById('kpi-today')?.textContent || '0';
+  const totalProd = defects.reduce((s,d)=>s+d.prod,0);
+  const total = String(defects.length);
+  const occ = totalProd>0?((defects.length/totalProd)*100).toFixed(2)+'%':'0%';
+  const alerts = String(alertLog?alertLog.length:0);
+  const todayDate = new Date().toISOString().slice(0,10);
+  const today = String(defects.filter(d=>d.datetime&&d.datetime.slice(0,10)===todayDate).length);
 
   const now = new Date();
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -4065,11 +4389,13 @@ function exportDashboardPDF() {
   const dateStr = now.getDate() + ' ' + months[now.getMonth()] + ' ' + now.getFullYear();
   const timeStr = now.toLocaleTimeString('en-IN');
 
-  // Get KPI values
-  const total = document.getElementById('kpi-total')?.textContent || '0';
-  const occ = document.getElementById('kpi-occ')?.textContent || '0%';
-  const alerts = document.getElementById('kpi-alerts')?.textContent || '0';
-  const today = document.getElementById('kpi-today')?.textContent || '0';
+  // Get KPI values from data
+  const totalProd = defects.reduce((s,d)=>s+d.prod,0);
+  const total = String(defects.length);
+  const occ = totalProd>0?((defects.length/totalProd)*100).toFixed(2)+'%':'0%';
+  const alerts = String(alertLog?alertLog.length:0);
+  const todayDate = new Date().toISOString().slice(0,10);
+  const today = String(defects.filter(d=>d.datetime&&d.datetime.slice(0,10)===todayDate).length);
 
   // Calculate data
   const high = defects.filter(d=>d.sev==='HIGH').length;
@@ -4833,6 +5159,399 @@ function generateOnePagerHTML(model, failure, station, rc, press, occ, raybg, ac
   w.document.close();
   showToast('\u2705 One-Pager ready! Print \u2192 Save as PDF');
 }
+
+// ════════════════════════════════════════════════════════════════
+// ═══════════ LIVE DASHBOARD MODULE ═══════════════════════════
+// ════════════════════════════════════════════════════════════════
+(function(){
+  'use strict';
+
+  // ─── Safe DOM helper ───
+  function ldEl(id){ return document.getElementById(id); }
+  function ldSet(id, val){ const el=ldEl(id); if(el) el.textContent=val; }
+
+  // ─── State ───
+  var ldPrevData = null;
+  var ldIsLoading = false;
+  var ldCharts = { station:null, defectType:null, shiftTrend:null, pareto:null };
+  var ldRefreshTimer = null;
+
+  // ─── Constants ───
+  var LD_STATIONS = ['ST-100','ST-120','ST-150','ST-200','ST-220'];
+  var LD_DEFECT_TYPES = ['Open Hem','Wrinkle','Overlap','Crack','Dent','Gap Issue'];
+  var LD_SHIFTS = ['Shift A','Shift B','Shift C'];
+  var LD_INSPECTORS = ['R. Patil','S. Jadhav','A. More','P. Kulkarni','V. Deshmukh',
+    'M. Shinde','N. Pawar','K. Gaikwad','D. Chavan','T. Bhosale'];
+  var LD_STATUSES = ['Open','In Progress','Resolved'];
+
+  // ─── Mock Data Generator ───
+  function ldRand(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+
+  function ldGenerateMock(){
+    var totalDefects = ldRand(12,58);
+    var highDefects = ldRand(2,Math.floor(totalDefects*0.35));
+    var stations = {};
+    LD_STATIONS.forEach(function(s){ stations[s] = ldRand(1,15); });
+    var defect_types = {};
+    LD_DEFECT_TYPES.forEach(function(d){ defect_types[d] = ldRand(0,12); });
+    defect_types['Open Hem'] = ldRand(8,20); // dominant
+    var by_shift = {};
+    LD_SHIFTS.forEach(function(s){ by_shift[s] = ldRand(3,22); });
+
+    var recent = [];
+    for(var i=0;i<8;i++){
+      var h=ldRand(6,22), m=ldRand(0,59);
+      recent.push({
+        time: String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'),
+        station: LD_STATIONS[ldRand(0,4)],
+        type: LD_DEFECT_TYPES[ldRand(0,5)],
+        severity: ['High','Medium','Low'][ldRand(0,2)],
+        inspector: LD_INSPECTORS[ldRand(0,9)],
+        shift: LD_SHIFTS[ldRand(0,2)],
+        status: LD_STATUSES[ldRand(0,2)]
+      });
+    }
+    recent.sort(function(a,b){ return b.time.localeCompare(a.time); });
+
+    return {
+      total_defects: totalDefects,
+      high_defects: highDefects,
+      fpy: parseFloat((95+Math.random()*4.5).toFixed(1)),
+      open_actions: ldRand(1,8),
+      cpk: parseFloat((0.9+Math.random()*0.8).toFixed(2)),
+      stations: stations,
+      defect_types: defect_types,
+      by_shift: by_shift,
+      recent_defects: recent
+    };
+  }
+
+  // ─── Also build from local defects array (hybrid mode) ───
+  window.ldRefreshFromLocal = function(){
+    if(typeof defects==='undefined' || !defects.length) return;
+    // Build stats from local defects
+    var stations = {};
+    LD_STATIONS.forEach(function(s){ stations[s]=0; });
+    var dtype_map = {};
+    var shift_map = {};
+    var highCount = 0;
+    var totalProd = 0;
+    defects.forEach(function(d){
+      if(stations[d.mach]!==undefined) stations[d.mach]++;
+      dtype_map[d.dtype] = (dtype_map[d.dtype]||0)+1;
+      var sk = d.shift ? d.shift.split(' ')[0]+' '+d.shift.split(' ')[1] : 'Unknown';
+      shift_map[sk] = (shift_map[sk]||0)+1;
+      if(d.sev==='HIGH') highCount++;
+      totalProd += (d.prod||0);
+    });
+    var occ = totalProd>0?((defects.length/totalProd)*100):0;
+    var data = {
+      total_defects: defects.length,
+      high_defects: highCount,
+      fpy: totalProd>0 ? parseFloat((100-occ).toFixed(1)) : 98.5,
+      open_actions: ldRand(1,5),
+      cpk: parseFloat((1.0+Math.random()*0.5).toFixed(2)),
+      stations: stations,
+      defect_types: dtype_map,
+      by_shift: shift_map,
+      recent_defects: defects.slice(-8).reverse().map(function(d){
+        return {
+          time: d.datetime ? d.datetime.split('T')[1]||d.datetime.slice(11,16) : '--:--',
+          station: d.mach||'—',
+          type: d.dtype||'—',
+          severity: d.sev==='HIGH'?'High':d.sev==='MED'?'Medium':'Low',
+          inspector: d.op||'—',
+          shift: d.shift?d.shift.split('(')[0].trim():'—',
+          status: 'Logged'
+        };
+      })
+    };
+    ldHandleData(data, true);
+  };
+
+  // ─── API Fetch ───
+  window.ldFetchData = function(){
+    if(ldIsLoading) return;
+    ldIsLoading = true;
+    ldSetLoading(true);
+
+    // Try API first
+    var controller;
+    var timeout;
+    try{
+      controller = new AbortController();
+      timeout = setTimeout(function(){ controller.abort(); },4000);
+    }catch(e){ controller=null; }
+
+    fetch('/get_stats', controller ? {signal:controller.signal} : {})
+      .then(function(r){
+        clearTimeout(timeout);
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        return r.json();
+      })
+      .then(function(data){
+        ldHandleData(data, false);
+      })
+      .catch(function(err){
+        console.info('[HemmTrack Live] API unavailable, using fallback:', err.message);
+        // Try local defects first, then mock
+        if(typeof defects!=='undefined' && defects.length>0){
+          window.ldRefreshFromLocal();
+        } else {
+          ldHandleData(ldGenerateMock(), true);
+        }
+      })
+      .finally(function(){
+        ldIsLoading = false;
+        ldSetLoading(false);
+      });
+  };
+
+  // ─── Handle Data ───
+  function ldHandleData(data, isMock){
+    ldUpdateConnection(!isMock);
+    ldUpdateStatus(isMock?'demo':'ok');
+    ldUpdateKPIs(data);
+    ldUpdateCharts(data);
+    ldUpdateTable(data.recent_defects||[]);
+    ldUpdateTimestamp();
+    ldPrevData = data;
+  }
+
+  // ─── Connection ───
+  function ldUpdateConnection(online){
+    var el = ldEl('ld-conn');
+    if(!el) return;
+    el.className = 'ld-conn '+(online?'online':'offline');
+    ldSet('ld-conn-label', online?'Live':'Demo');
+  }
+
+  // ─── Status Bar ───
+  function ldUpdateStatus(state){
+    var bar = ldEl('ld-status');
+    if(!bar) return;
+    bar.classList.remove('ok','err','load','ld-status-shake');
+    if(state==='ok'){
+      bar.classList.add('ok');
+      ldSet('ld-status-icon','✓'); ldSet('ld-status-text','System operational — all stations reporting');
+    } else if(state==='demo'){
+      bar.classList.add('ok');
+      ldSet('ld-status-icon','◉'); ldSet('ld-status-text','Demo mode — displaying simulated data');
+    } else if(state==='error'){
+      bar.classList.add('err','ld-status-shake');
+      ldSet('ld-status-icon','✕'); ldSet('ld-status-text','Connection failed — retrying…');
+    } else if(state==='loading'){
+      bar.classList.add('load');
+      ldSet('ld-status-icon','⟳'); ldSet('ld-status-text','Fetching latest data…');
+    }
+  }
+
+  // ─── Loading State ───
+  function ldSetLoading(on){
+    if(on){
+      ldUpdateStatus('loading');
+      ['ld-badge-station','ld-badge-type','ld-badge-shift','ld-badge-table'].forEach(function(id){
+        var el=ldEl(id); if(el) el.classList.add('ld-badge-pulse');
+      });
+      var ri=ldEl('ld-refresh-icon'); if(ri) ri.classList.add('ld-spin');
+    } else {
+      ['ld-badge-station','ld-badge-type','ld-badge-shift','ld-badge-table'].forEach(function(id){
+        var el=ldEl(id); if(el) el.classList.remove('ld-badge-pulse');
+      });
+      var ri=ldEl('ld-refresh-icon'); if(ri) ri.classList.remove('ld-spin');
+    }
+  }
+
+  // ─── KPI Updates with Pop ───
+  function ldUpdateKPIs(data){
+    var fields = [
+      {id:'ld-kpi-total',val:data.total_defects,did:'ld-kpi-total-d',prev:'total_defects',suf:'',inv:true},
+      {id:'ld-kpi-high',val:data.high_defects,did:'ld-kpi-high-d',prev:'high_defects',suf:'',inv:true},
+      {id:'ld-kpi-fpy',val:data.fpy,did:'ld-kpi-fpy-d',prev:'fpy',suf:'%',inv:false},
+      {id:'ld-kpi-actions',val:data.open_actions,did:'ld-kpi-actions-d',prev:'open_actions',suf:'',inv:true},
+      {id:'ld-kpi-cpk',val:data.cpk,did:'ld-kpi-cpk-d',prev:'cpk',suf:'',inv:false}
+    ];
+    fields.forEach(function(f){
+      var el=ldEl(f.id); if(!el) return;
+      var display = f.val!=null ? f.val+f.suf : '—';
+      var changed = ldPrevData && ldPrevData[f.prev]!==f.val;
+      el.textContent = display;
+      el.classList.remove('ld-shimmer');
+      if(changed){
+        el.classList.remove('ld-kpi-pop');
+        void el.offsetWidth;
+        el.classList.add('ld-kpi-pop');
+      }
+      var de=ldEl(f.did);
+      if(de && ldPrevData){
+        var prev=ldPrevData[f.prev];
+        var diff=f.val-prev;
+        if(Math.abs(diff)<0.01){
+          de.className='ld-kpi-delta flat'; de.textContent='No change';
+        } else {
+          var isGood = f.inv ? diff<0 : diff>0;
+          de.className='ld-kpi-delta '+(isGood?'down':'up');
+          var arrow = diff>0?'▲':'▼';
+          de.textContent=arrow+' '+Math.abs(diff<1?diff.toFixed(2):Math.round(diff))+' from prev';
+        }
+      }
+    });
+  }
+
+  // ─── Chart Helpers ───
+  function ldGetOrCreate(key, canvasId, config){
+    if(ldCharts[key]) return ldCharts[key];
+    var canvas = ldEl(canvasId);
+    if(!canvas){ console.warn('[LD] Canvas #'+canvasId+' not found'); return null; }
+    var ctx = canvas.getContext('2d');
+    ldCharts[key] = new Chart(ctx, config);
+    return ldCharts[key];
+  }
+
+  function ldUpdateCharts(data){
+    ldUpdateStationChart(data.stations||{});
+    ldUpdateTypeChart(data.defect_types||{});
+    ldUpdateShiftChart(data.by_shift||{});
+    ldUpdateParetoChart(data.defect_types||{});
+  }
+
+  // — Station Bar —
+  function ldUpdateStationChart(stations){
+    var labels=Object.keys(stations), values=Object.values(stations);
+    var palette=['rgba(0,229,255,0.7)','rgba(168,85,247,0.7)','rgba(0,200,180,0.7)','rgba(255,170,0,0.7)','rgba(255,61,90,0.7)'];
+    var borders=['#00e5ff','#a855f7','#00c8b4','#ffaa00','#ff3d5a'];
+    var chart = ldGetOrCreate('station','ld-ch-station',{
+      type:'bar',
+      data:{labels:labels,datasets:[{label:'Defects',data:values,backgroundColor:palette,borderColor:borders,borderWidth:2,borderRadius:6,borderSkipped:false}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{y:{beginAtZero:true,grid:{color:'rgba(30,48,80,0.4)'},ticks:{color:'#4a6fa5'}},x:{grid:{display:false},ticks:{color:'#4a6fa5'}}}}
+    });
+    if(chart){
+      chart.data.labels=labels; chart.data.datasets[0].data=values;
+      chart.update('none');
+    }
+  }
+
+  // — Defect Type Doughnut —
+  function ldUpdateTypeChart(types){
+    var labels=Object.keys(types), values=Object.values(types);
+    var colors=['rgba(255,61,90,0.8)','rgba(255,170,0,0.8)','rgba(0,229,255,0.8)','rgba(168,85,247,0.8)','rgba(0,200,180,0.8)','rgba(0,255,136,0.8)'];
+    var chart = ldGetOrCreate('defectType','ld-ch-type',{
+      type:'doughnut',
+      data:{labels:labels,datasets:[{data:values,backgroundColor:colors.slice(0,labels.length),borderColor:'transparent',borderWidth:0,hoverOffset:8}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
+        plugins:{legend:{position:'right',labels:{padding:10,font:{size:10},color:'#4a6fa5'}}}}
+    });
+    if(chart){
+      chart.data.labels=labels; chart.data.datasets[0].data=values;
+      chart.data.datasets[0].backgroundColor=colors.slice(0,labels.length);
+      chart.update('none');
+    }
+  }
+
+  // — Shift Trend Line —
+  function ldUpdateShiftChart(byShift){
+    var labels=Object.keys(byShift), values=Object.values(byShift);
+    var chart = ldGetOrCreate('shiftTrend','ld-ch-shift',{
+      type:'line',
+      data:{labels:labels,datasets:[{label:'Defects',data:values,borderColor:'#00e5ff',backgroundColor:'rgba(0,229,255,0.08)',fill:true,tension:0.4,pointBackgroundColor:'#00e5ff',pointBorderColor:'#0f1928',pointBorderWidth:2,pointRadius:5,pointHoverRadius:7}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{y:{beginAtZero:true,grid:{color:'rgba(30,48,80,0.4)'},ticks:{color:'#4a6fa5'}},x:{grid:{display:false},ticks:{color:'#4a6fa5'}}}}
+    });
+    if(chart){
+      chart.data.labels=labels; chart.data.datasets[0].data=values;
+      chart.update('none');
+    }
+  }
+
+  // — Pareto (Bar + Line) —
+  function ldUpdateParetoChart(types){
+    var sorted=Object.entries(types).sort(function(a,b){return b[1]-a[1];});
+    var labels=sorted.map(function(e){return e[0];}), values=sorted.map(function(e){return e[1];});
+    var total=values.reduce(function(s,v){return s+v;},0)||1;
+    var cum=0;
+    var cumulative=values.map(function(v){cum+=v; return parseFloat(((cum/total)*100).toFixed(1));});
+    var chart = ldGetOrCreate('pareto','ld-ch-pareto',{
+      type:'bar',
+      data:{labels:labels,datasets:[
+        {label:'Count',type:'bar',data:values,backgroundColor:'rgba(0,229,255,0.25)',borderColor:'#00e5ff',borderWidth:2,borderRadius:6,borderSkipped:false,yAxisID:'y'},
+        {label:'Cumulative %',type:'line',data:cumulative,borderColor:'#ffaa00',backgroundColor:'transparent',pointBackgroundColor:'#ffaa00',pointBorderColor:'#0f1928',pointBorderWidth:2,pointRadius:4,tension:0.3,yAxisID:'y1'}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{position:'top',labels:{color:'#4a6fa5',font:{size:10}}}},
+        scales:{
+          y:{beginAtZero:true,position:'left',grid:{color:'rgba(30,48,80,0.4)'},ticks:{color:'#4a6fa5'},title:{display:true,text:'Count',font:{size:9},color:'#4a6fa5'}},
+          y1:{beginAtZero:true,max:100,position:'right',grid:{display:false},ticks:{color:'#4a6fa5',callback:function(v){return v+'%';}},title:{display:true,text:'Cumulative %',font:{size:9},color:'#4a6fa5'}},
+          x:{grid:{display:false},ticks:{color:'#4a6fa5'}}
+        }}
+    });
+    if(chart){
+      chart.data.labels=labels;
+      chart.data.datasets[0].data=values;
+      chart.data.datasets[1].data=cumulative;
+      chart.update('none');
+    }
+  }
+
+  // ─── Table with Row Slide-in ───
+  function ldUpdateTable(defectList){
+    var tbody = ldEl('ld-table-body');
+    if(!tbody) return;
+    if(!defectList||!defectList.length){
+      tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px;">No recent defects recorded</td></tr>';
+      return;
+    }
+    tbody.innerHTML='';
+    defectList.forEach(function(d,i){
+      var tr = document.createElement('tr');
+      tr.className = 'ld-row-slide';
+      tr.style.animationDelay = (i*0.06)+'s';
+      var sevClass = (d.severity||'').toLowerCase();
+      var statusColor = d.status==='Resolved'?'var(--green)':d.status==='In Progress'?'var(--amber)':'var(--red)';
+      tr.innerHTML =
+        '<td style="font-family:var(--font-m);font-size:11px;">'+ldEsc(d.time||'—')+'</td>'+
+        '<td><strong>'+ldEsc(d.station||'—')+'</strong></td>'+
+        '<td>'+ldEsc(d.type||'—')+'</td>'+
+        '<td><span class="ld-sev-badge '+sevClass+'">'+ldEsc(d.severity||'—')+'</span></td>'+
+        '<td>'+ldEsc(d.inspector||'—')+'</td>'+
+        '<td>'+ldEsc(d.shift||'—')+'</td>'+
+        '<td style="color:'+statusColor+';font-weight:700;">'+ldEsc(d.status||'—')+'</td>';
+      tbody.appendChild(tr);
+    });
+  }
+
+  function ldEsc(str){
+    var d=document.createElement('div'); d.textContent=str; return d.innerHTML;
+  }
+
+  // ─── Timestamp ───
+  function ldUpdateTimestamp(){
+    var now=new Date();
+    var ts=now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    ldSet('ld-last-updated','Updated '+ts);
+  }
+
+  // ─── Refresh Button ───
+  var btn=ldEl('ld-btn-refresh');
+  if(btn) btn.addEventListener('click',function(){ window.ldFetchData(); });
+
+  // ─── Auto-refresh every 30s ───
+  function ldStartAutoRefresh(){
+    if(ldRefreshTimer) clearInterval(ldRefreshTimer);
+    ldRefreshTimer = setInterval(function(){
+      // Only auto-refresh if dashboard tab is visible
+      var panel=ldEl('tab-dashboard');
+      if(panel && panel.classList.contains('on')){
+        window.ldFetchData();
+      }
+    }, 30000);
+  }
+
+  // ─── Init on first dashboard tab open ───
+  ldStartAutoRefresh();
+  // Don't auto-fetch on page load (only when user clicks Dashboard tab)
+
+})();
 
 </script>
 <!-- FOOTER -->
