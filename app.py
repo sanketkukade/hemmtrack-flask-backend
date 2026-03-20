@@ -63,15 +63,43 @@ CORS(app, origins=[
 # CONFIG
 # ═══════════════════════════════════════════════════
 def get_smtp_config():
-    """Read SMTP config from Railway environment variables."""
-    email = os.environ.get('SMTP_EMAIL', '').strip()
-    password = os.environ.get('SMTP_PASSWORD', '').strip()
+    """Read SMTP config from Railway environment variables.
+    
+    Handles variable name mismatches:
+      Railway has ALERT_TO_EMAIL  → maps to SMTP email
+      Railway has RESEND_API_KEY  → maps to SMTP password (Gmail App Password)
+    
+    Normalizes Gmail App Password:
+      "bekc unmr ywxe vyad" → "bekcunmrywxevyad"
+    """
+    # Smart fallback chain: try exact name first, then alternatives
+    email = (
+        os.environ.get('SMTP_EMAIL', '').strip()
+        or os.environ.get('SMTP_USER', '').strip()
+        or os.environ.get('ALERT_TO_EMAIL', '').strip()
+    )
+
+    # Password: try all possible var names, then strip ALL spaces
+    raw_password = (
+        os.environ.get('SMTP_PASSWORD', '').strip()
+        or os.environ.get('SMTP_PASS', '').strip()
+        or os.environ.get('RESEND_API_KEY', '').strip()
+        or os.environ.get('GMAIL_APP_PASSWORD', '').strip()
+    )
+    # Gmail App Passwords are displayed as "xxxx xxxx xxxx xxxx"
+    # but SMTP auth requires "xxxxxxxxxxxxxxxx" (no spaces)
+    password = raw_password.replace(' ', '')
+
     host = os.environ.get('SMTP_HOST', 'smtp.gmail.com').strip()
     port = int(os.environ.get('SMTP_PORT', '587'))
 
     log.info("📧 SMTP Config Check:")
     log.info(f"   SMTP_EMAIL    = {'✅ ' + email[:5] + '***' if email else '❌ NOT SET'}")
+    if email and not os.environ.get('SMTP_EMAIL'):
+        log.info(f"   (resolved from ALERT_TO_EMAIL)")
     log.info(f"   SMTP_PASSWORD = {'✅ SET (' + str(len(password)) + ' chars)' if password else '❌ NOT SET'}")
+    if password and not os.environ.get('SMTP_PASSWORD'):
+        log.info(f"   (resolved from RESEND_API_KEY, spaces removed)")
     log.info(f"   SMTP_HOST     = {host}")
     log.info(f"   SMTP_PORT     = {port}")
 
