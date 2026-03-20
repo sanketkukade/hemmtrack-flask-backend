@@ -21,8 +21,11 @@ import io
 import time
 import json
 import base64
+import socket
 import logging
 import requests
+import requests.adapters
+import urllib3.util.retry
 from datetime import datetime
 
 from flask import Flask, request, jsonify
@@ -51,6 +54,53 @@ CORS(app, origins=[
     "http://localhost:8080",
     "null",
 ])
+
+
+# ═══════════════════════════════════════════════════
+# RESILIENT HTTP — IPv4 Forcing + Retry Adapter
+# ═══════════════════════════════════════════════════
+# Railway containers sometimes fail on IPv6 DNS resolution.
+# Force all outbound connections to use IPv4.
+_orig_getaddrinfo = socket.getaddrinfo
+
+def _ipv4_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+    """Force IPv4 (AF_INET) for all DNS lookups."""
+    return _orig_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
+
+socket.getaddrinfo = _ipv4_getaddrinfo
+log.info("🌐 IPv4 forced for all outbound connections")
+
+
+def _build_resilient_session():
+    """Build a requests.Session with automatic retry on transient failures.
+
+    Retry strategy:
+      - 3 total retries (so up to 4 attempts total)
+      - Exponential backoff: 1s → 2s → 4s between retries
+      - Retries on: 429 (rate limit), 500, 502, 503, 504
+      - Retries on: ConnectionError, Timeout, incomplete reads
+    """
+    retry = urllib3.util.retry.Retry(
+        total=3,
+        backoff_factor=1,          # 1s, 2s, 4s
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["POST", "GET"],
+        raise_on_status=False,     # Let us handle status codes
+    )
+    adapter = requests.adapters.HTTPAdapter(
+        max_retries=retry,
+        pool_connections=5,
+        pool_maxsize=5,
+    )
+    session = requests.Session()
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    return session
+
+
+# Single global session — reused across all requests
+http = _build_resilient_session()
+log.info("🔄 Resilient HTTP session ready (3 retries, exponential backoff)")
 
 
 # ═══════════════════════════════════════════════════
@@ -173,10 +223,23 @@ def generate_one_pager_ppt(data):
 
 
 # ═══════════════════════════════════════════════════
-# EMAIL — Resend API  (zero SMTP code)
+# EMAIL — Resend API + Retry + IPv4 + Timeout
 # ═══════════════════════════════════════════════════
+MAX_EMAIL_ATTEMPTS = 3
+EMAIL_TIMEOUT = (10, 30)  # (connect_timeout, read_timeout)
+
+
 def send_email_with_ppt(resend_cfg, data, ppt_bytes=None):
-    """Send alert email via Resend API. Attach PPT if provided."""
+    """Send alert email via Resend API with retry resilience.
+
+    Resilience features:
+      ✅ IPv4 forced (socket monkey-patch above)
+      ✅ 3 retry attempts with exponential backoff (1s → 2s → 4s)
+      ✅ Separate connect (10s) and read (30s) timeouts
+      ✅ Per-attempt logging with timing
+      ✅ urllib3 Retry adapter handles 429/5xx automatically
+      ✅ Manual retry for application-level errors
+    """
 
     if not resend_cfg['valid']:
         log.error("❌ Resend not configured! Railway → Variables → Add:")
@@ -184,83 +247,124 @@ def send_email_with_ppt(resend_cfg, data, ppt_bytes=None):
         log.error("   ALERT_TO_EMAIL   = sanketkukade111@gmail.com")
         return 'skipped: Resend not configured'
 
-    try:
-        occ = data.get('occ', '?')
-        station = data.get('station', '-')
-        failure = data.get('failure', 'Open Hem')
-        has_ppt = ppt_bytes is not None
+    occ = data.get('occ', '?')
+    station = data.get('station', '-')
+    failure = data.get('failure', 'Open Hem')
+    has_ppt = ppt_bytes is not None
 
-        subject = (f"📊 ONE PAGER — OCC {occ} | {failure} | {station} — HemmTrack" if has_ppt
-                   else f"🚨 OCC ALERT {occ} — {failure} | {station} — HemmTrack")
+    subject = (f"📊 ONE PAGER — OCC {occ} | {failure} | {station} — HemmTrack" if has_ppt
+               else f"🚨 OCC ALERT {occ} — {failure} | {station} — HemmTrack")
 
-        html_body = f"""
-        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;
-                    background:#060a12;color:#d4e8ff;padding:24px;border-radius:12px;">
-          <div style="text-align:center;padding:16px;background:linear-gradient(135deg,#0a1628,#0f1928);
-                      border-radius:10px;margin-bottom:16px;">
-            <h1 style="color:#00e5ff;margin:0;font-size:22px;">
-              {'📊 ONE PAGER ALERT' if has_ppt else '🚨 OCC ALERT'}</h1>
-            <p style="color:#4a6fa5;margin:4px 0 0;font-size:12px;">HemmTrack Pro V2 — Automated Alert</p>
-          </div>
-          <table style="width:100%;border-collapse:collapse;margin:16px 0;">
-            <tr><td style="padding:8px;color:#4a6fa5;">📅 Date</td><td style="padding:8px;color:#d4e8ff;font-weight:700;">{data.get('date','-')}</td></tr>
-            <tr><td style="padding:8px;color:#4a6fa5;">🔴 OCC Count</td><td style="padding:8px;color:#ff3d5a;font-weight:900;font-size:18px;">{occ}</td></tr>
-            <tr><td style="padding:8px;color:#4a6fa5;">🏭 Station</td><td style="padding:8px;color:#d4e8ff;font-weight:700;">{station}</td></tr>
-            <tr><td style="padding:8px;color:#4a6fa5;">🔍 Failure</td><td style="padding:8px;color:#ff3d5a;font-weight:700;">{failure}</td></tr>
-            <tr><td style="padding:8px;color:#4a6fa5;">🚪 Side</td><td style="padding:8px;color:#d4e8ff;">{data.get('side','-')}</td></tr>
-            <tr><td style="padding:8px;color:#4a6fa5;">🔧 Root Cause</td><td style="padding:8px;color:#d4e8ff;">{data.get('rc','-')}</td></tr>
-            <tr><td style="padding:8px;color:#4a6fa5;">💨 Pressure</td><td style="padding:8px;color:#d4e8ff;">{data.get('press','-')} Bar</td></tr>
-            <tr><td style="padding:8px;color:#4a6fa5;">👤 Inspector</td><td style="padding:8px;color:#d4e8ff;">{data.get('inspector','-')}</td></tr>
-            <tr><td style="padding:8px;color:#4a6fa5;">⚡ Action</td><td style="padding:8px;color:#d4e8ff;">{data.get('actions','-')}</td></tr>
-          </table>
-          {'<p style="text-align:center;color:#3e86f6;font-weight:700;">📎 One Pager PPT attached</p>' if has_ppt else ''}
-          <div style="text-align:center;padding:12px;margin-top:16px;border-top:1px solid #1e3050;">
-            <p style="color:#4a6fa5;font-size:10px;margin:0;">Sanket Kukade — M.Tech Manufacturing Engg, DYPIU Pune<br>Tata Motors PVBU — HemmTrack Pro V2</p>
-          </div>
-        </div>"""
+    html_body = f"""
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;
+                background:#060a12;color:#d4e8ff;padding:24px;border-radius:12px;">
+      <div style="text-align:center;padding:16px;background:linear-gradient(135deg,#0a1628,#0f1928);
+                  border-radius:10px;margin-bottom:16px;">
+        <h1 style="color:#00e5ff;margin:0;font-size:22px;">
+          {'📊 ONE PAGER ALERT' if has_ppt else '🚨 OCC ALERT'}</h1>
+        <p style="color:#4a6fa5;margin:4px 0 0;font-size:12px;">HemmTrack Pro V2 — Automated Alert</p>
+      </div>
+      <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+        <tr><td style="padding:8px;color:#4a6fa5;">📅 Date</td><td style="padding:8px;color:#d4e8ff;font-weight:700;">{data.get('date','-')}</td></tr>
+        <tr><td style="padding:8px;color:#4a6fa5;">🔴 OCC Count</td><td style="padding:8px;color:#ff3d5a;font-weight:900;font-size:18px;">{occ}</td></tr>
+        <tr><td style="padding:8px;color:#4a6fa5;">🏭 Station</td><td style="padding:8px;color:#d4e8ff;font-weight:700;">{station}</td></tr>
+        <tr><td style="padding:8px;color:#4a6fa5;">🔍 Failure</td><td style="padding:8px;color:#ff3d5a;font-weight:700;">{failure}</td></tr>
+        <tr><td style="padding:8px;color:#4a6fa5;">🚪 Side</td><td style="padding:8px;color:#d4e8ff;">{data.get('side','-')}</td></tr>
+        <tr><td style="padding:8px;color:#4a6fa5;">🔧 Root Cause</td><td style="padding:8px;color:#d4e8ff;">{data.get('rc','-')}</td></tr>
+        <tr><td style="padding:8px;color:#4a6fa5;">💨 Pressure</td><td style="padding:8px;color:#d4e8ff;">{data.get('press','-')} Bar</td></tr>
+        <tr><td style="padding:8px;color:#4a6fa5;">👤 Inspector</td><td style="padding:8px;color:#d4e8ff;">{data.get('inspector','-')}</td></tr>
+        <tr><td style="padding:8px;color:#4a6fa5;">⚡ Action</td><td style="padding:8px;color:#d4e8ff;">{data.get('actions','-')}</td></tr>
+      </table>
+      {'<p style="text-align:center;color:#3e86f6;font-weight:700;">📎 One Pager PPT attached</p>' if has_ppt else ''}
+      <div style="text-align:center;padding:12px;margin-top:16px;border-top:1px solid #1e3050;">
+        <p style="color:#4a6fa5;font-size:10px;margin:0;">Sanket Kukade — M.Tech Manufacturing Engg, DYPIU Pune<br>Tata Motors PVBU — HemmTrack Pro V2</p>
+      </div>
+    </div>"""
 
-        payload = {
-            "from": resend_cfg['from_email'],
-            "to": [resend_cfg['to_email']],
-            "subject": subject,
-            "html": html_body,
-        }
+    payload = {
+        "from": resend_cfg['from_email'],
+        "to": [resend_cfg['to_email']],
+        "subject": subject,
+        "html": html_body,
+    }
 
-        if has_ppt:
-            filename = f"OnePager_OCC{occ}_{station}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pptx"
-            payload["attachments"] = [{
-                "filename": filename,
-                "content": base64.b64encode(ppt_bytes).decode('utf-8'),
-            }]
-            log.info(f"📎 PPT attached: {filename} ({len(ppt_bytes)//1024} KB)")
+    if has_ppt:
+        filename = f"OnePager_OCC{occ}_{station}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pptx"
+        payload["attachments"] = [{
+            "filename": filename,
+            "content": base64.b64encode(ppt_bytes).decode('utf-8'),
+        }]
+        log.info(f"📎 PPT attached: {filename} ({len(ppt_bytes)//1024} KB)")
 
-        log.info(f"📤 Sending email via Resend → {resend_cfg['to_email']}...")
+    # ── Retry Loop ──
+    last_error = None
+    for attempt in range(1, MAX_EMAIL_ATTEMPTS + 1):
+        attempt_start = time.time()
+        try:
+            log.info(f"📤 Resend attempt {attempt}/{MAX_EMAIL_ATTEMPTS} → {resend_cfg['to_email']}...")
 
-        resp = requests.post(
-            RESEND_API_URL,
-            headers={"Authorization": f"Bearer {resend_cfg['api_key']}", "Content-Type": "application/json"},
-            json=payload,
-            timeout=30,
-        )
+            resp = http.post(
+                RESEND_API_URL,
+                headers={
+                    "Authorization": f"Bearer {resend_cfg['api_key']}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+                timeout=EMAIL_TIMEOUT,
+            )
 
-        if resp.status_code == 200:
-            resp_json = resp.json()
-            if resp_json.get('id'):
-                log.info(f"✅ Email SENT via Resend! ID: {resp_json['id']}")
-                return 'sent'
+            elapsed_ms = int((time.time() - attempt_start) * 1000)
 
-        err_msg = resp.text[:200]
-        log.error(f"❌ Resend error ({resp.status_code}): {err_msg}")
-        if resp.status_code in (401, 403):
-            log.error("   → RESEND_API_KEY invalid. Get new key: https://resend.com/api-keys")
-        return f'error: {resp.status_code}'
+            if resp.status_code == 200:
+                resp_json = resp.json()
+                if resp_json.get('id'):
+                    log.info(f"✅ Email SENT via Resend! ID: {resp_json['id']} ({elapsed_ms}ms, attempt {attempt})")
+                    return 'sent'
 
-    except requests.exceptions.Timeout:
-        log.error("❌ Resend timeout (30s)"); return 'error: timeout'
-    except requests.exceptions.ConnectionError as e:
-        log.error(f"❌ Cannot reach Resend: {e}"); return 'error: connection'
-    except Exception as e:
-        log.error(f"❌ Email error: {e}"); return f'error: {str(e)[:80]}'
+            # Non-200: log and decide whether to retry
+            err_msg = resp.text[:200]
+            log.warning(f"⚠️  Attempt {attempt} failed ({resp.status_code}, {elapsed_ms}ms): {err_msg}")
+
+            # Don't retry on client errors (4xx) — they won't change
+            if 400 <= resp.status_code < 500 and resp.status_code != 429:
+                log.error(f"❌ Resend client error {resp.status_code} — not retrying")
+                if resp.status_code in (401, 403):
+                    log.error("   → RESEND_API_KEY invalid. Get new key: https://resend.com/api-keys")
+                if resp.status_code == 422:
+                    log.error("   → Validation error. Check RESEND_FROM_EMAIL is verified.")
+                return f'error: {resp.status_code}'
+
+            last_error = f'http_{resp.status_code}'
+
+        except requests.exceptions.ConnectTimeout:
+            elapsed_ms = int((time.time() - attempt_start) * 1000)
+            log.warning(f"⚠️  Attempt {attempt} connect timeout ({elapsed_ms}ms)")
+            last_error = 'connect_timeout'
+
+        except requests.exceptions.ReadTimeout:
+            elapsed_ms = int((time.time() - attempt_start) * 1000)
+            log.warning(f"⚠️  Attempt {attempt} read timeout ({elapsed_ms}ms)")
+            last_error = 'read_timeout'
+
+        except requests.exceptions.ConnectionError as e:
+            elapsed_ms = int((time.time() - attempt_start) * 1000)
+            log.warning(f"⚠️  Attempt {attempt} connection error ({elapsed_ms}ms): {str(e)[:100]}")
+            last_error = 'connection_error'
+
+        except Exception as e:
+            elapsed_ms = int((time.time() - attempt_start) * 1000)
+            log.warning(f"⚠️  Attempt {attempt} unexpected error ({elapsed_ms}ms): {e}")
+            last_error = str(e)[:60]
+
+        # Backoff before next attempt (skip if last attempt)
+        if attempt < MAX_EMAIL_ATTEMPTS:
+            wait = 2 ** (attempt - 1)  # 1s, 2s
+            log.info(f"   ⏳ Waiting {wait}s before retry...")
+            time.sleep(wait)
+
+    # All attempts exhausted
+    log.error(f"❌ Email FAILED after {MAX_EMAIL_ATTEMPTS} attempts. Last error: {last_error}")
+    return f'failed: {last_error} (after {MAX_EMAIL_ATTEMPTS} attempts)'
 
 
 # ═══════════════════════════════════════════════════
