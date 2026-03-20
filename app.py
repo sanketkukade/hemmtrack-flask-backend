@@ -227,18 +227,19 @@ def generate_one_pager_ppt(data):
 # ═══════════════════════════════════════════════════
 MAX_EMAIL_ATTEMPTS = 3
 EMAIL_TIMEOUT = (10, 30)  # (connect_timeout, read_timeout)
+STATIC_PPT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Hemming_open-one_pager.pptx")
 
 
 def send_email_with_ppt(resend_cfg, data, ppt_bytes=None):
     """Send alert email via Resend API with retry resilience.
 
-    Resilience features:
-      ✅ IPv4 forced (socket monkey-patch above)
-      ✅ 3 retry attempts with exponential backoff (1s → 2s → 4s)
-      ✅ Separate connect (10s) and read (30s) timeouts
-      ✅ Per-attempt logging with timing
-      ✅ urllib3 Retry adapter handles 429/5xx automatically
-      ✅ Manual retry for application-level errors
+    PPT attachment logic:
+      OCC >= 5 → Loads STATIC PPT file (Hemming_open-one_pager.pptx)
+                 Does NOT use dynamically generated ppt_bytes.
+      OCC < 5  → No attachment.
+
+    The ppt_bytes parameter is IGNORED for email.
+    Telegram still uses ppt_bytes separately (unchanged).
     """
 
     if not resend_cfg['valid']:
@@ -248,11 +249,12 @@ def send_email_with_ppt(resend_cfg, data, ppt_bytes=None):
         return 'skipped: Resend not configured'
 
     occ = data.get('occ', '?')
+    occ_val = int(data.get('occ', 0))
     station = data.get('station', '-')
     failure = data.get('failure', 'Open Hem')
-    has_ppt = ppt_bytes is not None
+    attach_ppt = occ_val >= 5  # Only attach PPT when OCC threshold hit
 
-    subject = (f"📊 ONE PAGER — OCC {occ} | {failure} | {station} — HemmTrack" if has_ppt
+    subject = (f"📊 ONE PAGER — OCC {occ} | {failure} | {station} — HemmTrack" if attach_ppt
                else f"🚨 OCC ALERT {occ} — {failure} | {station} — HemmTrack")
 
     html_body = f"""
@@ -261,7 +263,7 @@ def send_email_with_ppt(resend_cfg, data, ppt_bytes=None):
       <div style="text-align:center;padding:16px;background:linear-gradient(135deg,#0a1628,#0f1928);
                   border-radius:10px;margin-bottom:16px;">
         <h1 style="color:#00e5ff;margin:0;font-size:22px;">
-          {'📊 ONE PAGER ALERT' if has_ppt else '🚨 OCC ALERT'}</h1>
+          {'📊 ONE PAGER ALERT' if attach_ppt else '🚨 OCC ALERT'}</h1>
         <p style="color:#4a6fa5;margin:4px 0 0;font-size:12px;">HemmTrack Pro V2 — Automated Alert</p>
       </div>
       <table style="width:100%;border-collapse:collapse;margin:16px 0;">
@@ -275,7 +277,7 @@ def send_email_with_ppt(resend_cfg, data, ppt_bytes=None):
         <tr><td style="padding:8px;color:#4a6fa5;">👤 Inspector</td><td style="padding:8px;color:#d4e8ff;">{data.get('inspector','-')}</td></tr>
         <tr><td style="padding:8px;color:#4a6fa5;">⚡ Action</td><td style="padding:8px;color:#d4e8ff;">{data.get('actions','-')}</td></tr>
       </table>
-      {'<p style="text-align:center;color:#3e86f6;font-weight:700;">📎 One Pager PPT attached</p>' if has_ppt else ''}
+      {'<p style="text-align:center;color:#3e86f6;font-weight:700;">📎 One Pager PPT attached</p>' if attach_ppt else ''}
       <div style="text-align:center;padding:12px;margin-top:16px;border-top:1px solid #1e3050;">
         <p style="color:#4a6fa5;font-size:10px;margin:0;">Sanket Kukade — M.Tech Manufacturing Engg, DYPIU Pune<br>Tata Motors PVBU — HemmTrack Pro V2</p>
       </div>
@@ -288,13 +290,28 @@ def send_email_with_ppt(resend_cfg, data, ppt_bytes=None):
         "html": html_body,
     }
 
-    if has_ppt:
-        filename = f"OnePager_OCC{occ}_{station}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pptx"
+    # ── Load STATIC PPT file (not dynamic generation) ──
+    if attach_ppt:
+        if not os.path.isfile(STATIC_PPT_PATH):
+            log.error(f"❌ Static PPT file NOT FOUND: {STATIC_PPT_PATH}")
+            log.error("   Place 'Hemming_open-one_pager.pptx' in the same folder as app.py")
+            return 'error: PPT file not found'
+
+        try:
+            with open(STATIC_PPT_PATH, 'rb') as f:
+                static_ppt_bytes = f.read()
+            file_size_kb = len(static_ppt_bytes) // 1024
+            log.info(f"📎 Static PPT loaded: {STATIC_PPT_PATH} ({file_size_kb} KB)")
+        except Exception as e:
+            log.error(f"❌ Failed to read static PPT: {e}")
+            return f'error: PPT read failed — {str(e)[:60]}'
+
+        filename = f"Hemming_Open_OnePager_OCC{occ}_{station}_{datetime.now().strftime('%Y%m%d_%H%M')}.pptx"
         payload["attachments"] = [{
             "filename": filename,
-            "content": base64.b64encode(ppt_bytes).decode('utf-8'),
+            "content": base64.b64encode(static_ppt_bytes).decode('utf-8'),
         }]
-        log.info(f"📎 PPT attached: {filename} ({len(ppt_bytes)//1024} KB)")
+        log.info(f"📎 Email attachment: {filename} ({file_size_kb} KB)")
 
     # ── Retry Loop ──
     last_error = None
@@ -321,11 +338,9 @@ def send_email_with_ppt(resend_cfg, data, ppt_bytes=None):
                     log.info(f"✅ Email SENT via Resend! ID: {resp_json['id']} ({elapsed_ms}ms, attempt {attempt})")
                     return 'sent'
 
-            # Non-200: log and decide whether to retry
             err_msg = resp.text[:200]
             log.warning(f"⚠️  Attempt {attempt} failed ({resp.status_code}, {elapsed_ms}ms): {err_msg}")
 
-            # Don't retry on client errors (4xx) — they won't change
             if 400 <= resp.status_code < 500 and resp.status_code != 429:
                 log.error(f"❌ Resend client error {resp.status_code} — not retrying")
                 if resp.status_code in (401, 403):
@@ -356,13 +371,11 @@ def send_email_with_ppt(resend_cfg, data, ppt_bytes=None):
             log.warning(f"⚠️  Attempt {attempt} unexpected error ({elapsed_ms}ms): {e}")
             last_error = str(e)[:60]
 
-        # Backoff before next attempt (skip if last attempt)
         if attempt < MAX_EMAIL_ATTEMPTS:
-            wait = 2 ** (attempt - 1)  # 1s, 2s
+            wait = 2 ** (attempt - 1)
             log.info(f"   ⏳ Waiting {wait}s before retry...")
             time.sleep(wait)
 
-    # All attempts exhausted
     log.error(f"❌ Email FAILED after {MAX_EMAIL_ATTEMPTS} attempts. Last error: {last_error}")
     return f'failed: {last_error} (after {MAX_EMAIL_ATTEMPTS} attempts)'
 
